@@ -309,10 +309,11 @@ export default function OrdersPage() {
     try {
       const result = await syncFromShopify(selectedOrders, currentWorkspace.workspace_id);
       if (result.success) {
+        const summary = result.summary || { alreadyFulfilled: 0, failed: 0 };
         alert(
           `Successfully synced ${selectedOrders.length} orders from Shopify!\n\n` +
-          `${result.summary.alreadyFulfilled} orders were already fulfilled in Shopify.\n` +
-          `${result.summary.failed} failed.`
+          `${summary.alreadyFulfilled} orders were already fulfilled in Shopify.\n` +
+          `${summary.failed} failed.`
         );
         setSelectedOrders([]);
         await mutate(); // Refresh the orders list
