@@ -2777,6 +2777,196 @@ app.post('/api/orders/bulk-fulfill', authenticateUser, authorizeWorkspace, async
 
 // ==================== BACKFILL & SYNC ROUTES ====================
 
+// Sync fulfillment status FROM Shopify TO database for imported orders
+app.post('/api/sync-from-shopify', authenticateUser, authorizeWorkspace, async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    const workspaceId = req.workspaceId; // From authorizeWorkspace middleware
+    
+    console.log(`🔄 Syncing fulfillment status from Shopify for ${orderIds ? orderIds.length : 'all'} orders in workspace ${workspaceId}...`);
+    
+    // Get orders to sync - either specific orders or all orders
+    let ordersQuery;
+    let queryParams;
+    
+    if (orderIds && orderIds.length > 0) {
+      // Sync specific orders
+      ordersQuery = `
+        SELECT DISTINCT
+          o.order_name,
+          o.shopify_order_id,
+          o.fulfillment_status as current_fulfillment_status
+        FROM orders o
+        WHERE o.workspace_id = $1
+          AND o.order_name = ANY($2::text[])
+      `;
+      queryParams = [workspaceId, orderIds];
+    } else {
+      // Sync all orders that aren't already fulfilled
+      ordersQuery = `
+        SELECT DISTINCT
+          o.order_name,
+          o.shopify_order_id,
+          o.fulfillment_status as current_fulfillment_status
+        FROM orders o
+        WHERE o.workspace_id = $1
+          AND (o.fulfillment_status IS NULL OR o.fulfillment_status != 'fulfilled')
+      `;
+      queryParams = [workspaceId];
+    }
+    
+    const ordersResult = await pool.query(ordersQuery, queryParams);
+    const orders = ordersResult.rows;
+    
+    console.log(`📋 Found ${orders.length} orders to check in Shopify`);
+    
+    if (orders.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No orders to sync',
+        synced: 0,
+        failed: 0
+      });
+    }
+    
+    let synced = 0;
+    let failed = 0;
+    let alreadyFulfilled = 0;
+    const results = [];
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    
+    for (let i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      try {
+        let shopifyOrderId = order.shopify_order_id;
+        
+        // If no Shopify order ID, look it up by order name
+        if (!shopifyOrderId || (typeof shopifyOrderId === 'string' && shopifyOrderId.includes('#'))) {
+          console.log(`🔍 Looking up Shopify order for ${order.order_name}...`);
+          const searchUrl = `/orders.json?name=${encodeURIComponent(order.order_name)}&status=any`;
+          const ordersData = await makeShopifyRequest(searchUrl, 'GET', null, workspaceId);
+          
+          if (ordersData.orders && ordersData.orders.length > 0) {
+            shopifyOrderId = ordersData.orders[0].id;
+            console.log(`✅ Found Shopify order ID: ${shopifyOrderId} for ${order.order_name}`);
+            
+            // Update the order with the correct Shopify order ID
+            await pool.query(
+              'UPDATE orders SET shopify_order_id = $1 WHERE order_name = $2 AND workspace_id = $3',
+              [shopifyOrderId, order.order_name, workspaceId]
+            );
+          } else {
+            console.log(`⚠️  Could not find Shopify order for ${order.order_name}`);
+            failed++;
+            results.push({ orderName: order.order_name, success: false, error: 'Order not found in Shopify' });
+            continue;
+          }
+        }
+        
+        // Fetch order details from Shopify
+        const orderData = await makeShopifyRequest(`/orders/${shopifyOrderId}.json`, 'GET', null, workspaceId);
+        
+        if (!orderData || !orderData.order) {
+          failed++;
+          results.push({ orderName: order.order_name, success: false, error: 'Failed to fetch order from Shopify' });
+          continue;
+        }
+        
+        const shopifyOrder = orderData.order;
+        
+        // Check if order has fulfillments in Shopify
+        if (!shopifyOrder.fulfillments || shopifyOrder.fulfillments.length === 0) {
+          console.log(`ℹ️  Order ${order.order_name} is not fulfilled in Shopify`);
+          results.push({ 
+            orderName: order.order_name, 
+            success: true, 
+            status: 'unfulfilled',
+            message: 'Not fulfilled in Shopify' 
+          });
+          continue;
+        }
+        
+        // Order is fulfilled in Shopify - update our database
+        const fulfillment = shopifyOrder.fulfillments[0];
+        const fulfillmentId = fulfillment.id;
+        const trackingNumber = fulfillment.tracking_number;
+        const fulfillmentStatus = fulfillment.status;
+        
+        console.log(`✅ Order ${order.order_name} is fulfilled in Shopify (fulfillment ID: ${fulfillmentId})`);
+        
+        // Update orders table with fulfillment status
+        await pool.query(
+          `UPDATE orders 
+           SET fulfillment_status = 'fulfilled', shopify_order_id = $1
+           WHERE order_name = $2 AND workspace_id = $3`,
+          [shopifyOrderId, order.order_name, workspaceId]
+        );
+        
+        // If there's a voucher for this order, update it with fulfillment info
+        const voucherResult = await pool.query(
+          'SELECT voucher_number FROM vouchers WHERE order_name = $1 AND workspace_id = $2 LIMIT 1',
+          [order.order_name, workspaceId]
+        );
+        
+        if (voucherResult.rows.length > 0) {
+          await pool.query(
+            `UPDATE vouchers 
+             SET shopify_fulfillment_id = $1, shopify_order_id = $2
+             WHERE order_name = $3 AND workspace_id = $4`,
+            [fulfillmentId, shopifyOrderId, order.order_name, workspaceId]
+          );
+        }
+        
+        synced++;
+        alreadyFulfilled++;
+        results.push({
+          orderName: order.order_name,
+          success: true,
+          status: 'fulfilled',
+          fulfillmentId: fulfillmentId,
+          trackingNumber: trackingNumber || 'No tracking',
+          message: 'Synced from Shopify'
+        });
+        
+        // Rate limiting: wait between requests
+        if (i < orders.length - 1) {
+          await delay(500); // 500ms between requests
+        }
+        
+      } catch (error) {
+        console.error(`Error syncing order ${order.order_name}:`, error.message);
+        failed++;
+        results.push({
+          orderName: order.order_name,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`✅ Sync complete: ${synced} synced (${alreadyFulfilled} were already fulfilled in Shopify), ${failed} failed`);
+    
+    res.json({
+      success: true,
+      message: `Synced ${synced} orders from Shopify`,
+      summary: {
+        total: orders.length,
+        synced: synced,
+        alreadyFulfilled: alreadyFulfilled,
+        failed: failed
+      },
+      results
+    });
+    
+  } catch (error) {
+    console.error('Error syncing from Shopify:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Backfill Shopify fulfillment IDs for already-fulfilled orders
 app.post('/api/backfill-fulfillment-ids', async (req, res) => {
   try {

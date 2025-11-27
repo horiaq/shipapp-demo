@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useOrders } from '@/lib/hooks/useOrders';
 import { useWorkspace } from '@/lib/contexts/WorkspaceContext';
-import { bulkFulfillOrders, bulkCreateInvoices, bulkUpdateTracking, exportLabels, sendLabelsToGeniki } from '@/lib/api/orders';
+import { bulkFulfillOrders, bulkCreateInvoices, bulkUpdateTracking, exportLabels, sendLabelsToGeniki, syncFromShopify } from '@/lib/api/orders';
 import OrdersTable from '@/components/OrdersTable';
 import { Pagination } from '@/components/OrdersTable';
 import BulkActionsDropdown from '@/components/Orders/BulkActionsDropdown';
@@ -296,6 +296,34 @@ export default function OrdersPage() {
     );
   };
 
+  const handleSyncFromShopify = async () => {
+    if (selectedOrders.length === 0 || !currentWorkspace) return;
+    
+    const confirmed = confirm(
+      `Sync fulfillment status from Shopify for ${selectedOrders.length} orders?\n\n` +
+      `This will check which orders are already fulfilled in Shopify and update your database.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const result = await syncFromShopify(selectedOrders, currentWorkspace.workspace_id);
+      if (result.success) {
+        alert(
+          `Successfully synced ${selectedOrders.length} orders from Shopify!\n\n` +
+          `${result.summary.alreadyFulfilled} orders were already fulfilled in Shopify.\n` +
+          `${result.summary.failed} failed.`
+        );
+        setSelectedOrders([]);
+        await mutate(); // Refresh the orders list
+      } else {
+        alert(`Error syncing from Shopify: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      alert(`Error syncing from Shopify: ${error.message || 'Unknown error'}`);
+    }
+  };
+
   const handleDelete = () => {
     if (selectedOrders.length === 0) return;
     if (confirm(`Are you sure you want to delete ${selectedOrders.length} orders?`)) {
@@ -340,6 +368,7 @@ export default function OrdersPage() {
             onDelete={handleDelete}
             onExportLabels={handleExportLabels}
             onSendLabels={handleSendLabels}
+            onSyncFromShopify={handleSyncFromShopify}
           />
         </div>
       </div>

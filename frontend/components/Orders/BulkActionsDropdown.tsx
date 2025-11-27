@@ -27,6 +27,7 @@ interface BulkActionsProps {
   onDelete: () => void;
   onExportLabels: () => void;
   onSendLabels: () => void;
+  onSyncFromShopify?: () => void;
 }
 
 export default function BulkActionsDropdown({
@@ -39,6 +40,7 @@ export default function BulkActionsDropdown({
   onDelete,
   onExportLabels,
   onSendLabels,
+  onSyncFromShopify,
 }: BulkActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -132,9 +134,23 @@ export default function BulkActionsDropdown({
           <CheckCircle size={16} />
           Fulfill Orders
         </div>
-        <div className="bulk-item" onClick={() => alert('Sync Shopify functionality')}>
+        <div className="bulk-item" onClick={() => selectedCount > 0 && onSyncFromShopify && handleAction(onSyncFromShopify)}>
           <ShoppingBag size={16} />
-          Sync Shopify
+          Sync from Shopify
+          <span style={{
+            marginLeft: 'auto',
+            fontSize: '0.65rem',
+            fontWeight: '600',
+            padding: '0.15rem 0.4rem',
+            borderRadius: '4px',
+            background: 'linear-gradient(135deg, #96bf48, #5e8e3e)',
+            color: 'white',
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+            boxShadow: '0 2px 4px rgba(150, 191, 72, 0.2)'
+          }}>
+            New
+          </span>
         </div>
         <div className="bulk-item" onClick={() => selectedCount > 0 && handleAction(onCreateInvoices)}>
           <FileText size={16} />

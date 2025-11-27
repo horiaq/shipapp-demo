@@ -133,3 +133,15 @@ export async function sendLabelsToGeniki(orderIds: string[], workspaceId: number
   return response.json();
 }
 
+export async function syncFromShopify(orderIds: string[], workspaceId: number): Promise<ApiResponse<any>> {
+  const response = await fetchWithAuth('/api/sync-from-shopify', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Workspace-Id': workspaceId.toString(),
+    },
+    body: JSON.stringify({ orderIds, workspaceId }),
+  });
+  return response.json();
+}
+
