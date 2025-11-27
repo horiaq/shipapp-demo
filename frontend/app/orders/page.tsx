@@ -68,9 +68,13 @@ export default function OrdersPage() {
       formData.append('workspaceId', currentWorkspace.workspace_id.toString());
       
       try {
+        // Get auth token from localStorage
+        const token = localStorage.getItem('auth_token');
+        
         const response = await fetch('/api/upload-csv', {
           method: 'POST',
           headers: {
+            'Authorization': `Bearer ${token}`,
             'X-Workspace-Id': currentWorkspace.workspace_id.toString(),
           },
           body: formData,
