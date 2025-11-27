@@ -1,6 +1,6 @@
 import { Order } from '../types';
 
-type OrderStatus = 'Unfulfilled' | 'AWB Created' | 'Sent' | 'In Transit' | 'Delivered' | 'Returned' | 'Completed';
+type OrderStatus = 'Unfulfilled' | 'AWB Created' | 'Sent' | 'Fulfilled' | 'In Transit' | 'Delivered' | 'Returned' | 'Completed';
 
 export function getOrderStatus(order: Order): OrderStatus {
   // Use the calculated order_status from backend if available
@@ -55,6 +55,8 @@ function formatOrderStatus(status: string): OrderStatus {
       return 'AWB Created';
     case 'sent':
       return 'Sent';
+    case 'fulfilled':
+      return 'Fulfilled';
     case 'in_transit':
       return 'In Transit';
     case 'delivered':

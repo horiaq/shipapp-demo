@@ -1142,6 +1142,11 @@ function calculateOrderStatus(order) {
     return 'delivered';
   }
   
+  // Check if order is fulfilled in Shopify (but not yet delivered)
+  if (order.fulfillment_status === 'fulfilled' && !order.delivery_status && !hasVoucher) {
+    return 'fulfilled'; // Fulfilled in Shopify = order is shipped
+  }
+  
   // Check if voucher was sent to Geniki (closed/pending)
   if (hasVoucher && order.sent_to_geniki) {
     return 'sent';

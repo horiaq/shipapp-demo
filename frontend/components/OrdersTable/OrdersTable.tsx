@@ -288,6 +288,14 @@ export default function OrdersTable({
                   Sent
                 </span>
               </div>
+              <div className="bulk-item" onClick={() => filterOrders('Fulfilled')}>
+                <span
+                  className="status-badge status-fulfilled"
+                  style={{ padding: '2px 6px', fontSize: '0.65rem' }}
+                >
+                  Fulfilled
+                </span>
+              </div>
               <div className="bulk-item" onClick={() => filterOrders('In Transit')}>
                 <span
                   className="status-badge status-in_transit"
