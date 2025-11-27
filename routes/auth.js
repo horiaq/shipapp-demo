@@ -211,7 +211,7 @@ router.post('/login', async (req, res) => {
     // Get user's workspaces
     const workspacesResult = await pool.query(
       `SELECT w.workspace_id, w.workspace_name, w.store_name, w.shopify_shop, 
-              w.is_active, uw.role
+              w.is_active, w.invoice_currency, w.invoice_language, uw.role
        FROM workspaces w
        JOIN user_workspaces uw ON w.workspace_id = uw.workspace_id
        WHERE uw.user_id = $1 AND w.is_active = TRUE
@@ -354,7 +354,7 @@ router.get('/me', async (req, res) => {
     // Get user's workspaces
     const workspacesResult = await pool.query(
       `SELECT w.workspace_id, w.workspace_name, w.store_name, w.shopify_shop, 
-              w.is_active, uw.role
+              w.is_active, w.invoice_currency, w.invoice_language, uw.role
        FROM workspaces w
        JOIN user_workspaces uw ON w.workspace_id = uw.workspace_id
        WHERE uw.user_id = $1 AND w.is_active = TRUE
