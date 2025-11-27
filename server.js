@@ -1867,6 +1867,7 @@ app.get('/api/imported-orders', authenticateUser, authorizeWorkspace, async (req
           currentLocation: order.current_location,
           deliveredAt: order.delivered_at,
           deliveryStatusUpdatedAt: order.delivery_status_updated_at,
+          orderStatus: order.order_status, // THIS WAS MISSING!
           importedAt: order.imported_at,
           lineItems: order.line_items,
           products: order.products ? (typeof order.products === 'string' ? JSON.parse(order.products) : order.products) : null,
