@@ -12,6 +12,8 @@ export interface Workspace {
   oblio_secret: string | null;
   oblio_series_name: string | null;
   oblio_vat_rate: string | null;
+  invoice_currency: string | null;
+  invoice_language: string | null;
   is_active: boolean;
   created_at: string;
 }
