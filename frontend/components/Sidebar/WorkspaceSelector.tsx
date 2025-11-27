@@ -3,11 +3,15 @@
 import React, { useState } from 'react';
 import { ChevronDown, Search, Plus, Check } from 'react-feather';
 import { useWorkspace } from '@/lib/contexts/WorkspaceContext';
+import { fetchWithAuth } from '@/lib/utils/api';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function WorkspaceSelector() {
   const { currentWorkspace, allWorkspaces, switchWorkspace } = useWorkspace();
+  const { refreshUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   const toggleDropdown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -18,6 +22,54 @@ export default function WorkspaceSelector() {
     switchWorkspace(workspaceId);
     setIsOpen(false);
     setSearchQuery('');
+  };
+
+  const handleCreateWorkspace = async () => {
+    const workspaceName = prompt('Enter new workspace name:');
+    
+    if (!workspaceName || workspaceName.trim() === '') {
+      return;
+    }
+    
+    const storeName = prompt('Enter store name (optional):') || workspaceName.trim();
+    const shopifyShop = prompt('Enter Shopify shop domain (optional, e.g., yourstore.myshopify.com):');
+    
+    setIsCreating(true);
+    
+    try {
+      const response = await fetchWithAuth('/api/workspaces', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          workspace_name: workspaceName.trim(),
+          store_name: storeName.trim(),
+          shopify_shop: shopifyShop?.trim() || null
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✅ Workspace "${data.workspace.workspace_name}" created successfully!`);
+        
+        // Refresh user data to get updated workspace list
+        await refreshUser();
+        
+        // Switch to the new workspace
+        switchWorkspace(data.workspace.workspace_id);
+        
+        setIsOpen(false);
+      } else {
+        alert(`❌ Failed to create workspace: ${data.error}`);
+      }
+    } catch (error: any) {
+      console.error('Error creating workspace:', error);
+      alert(`❌ Error creating workspace: ${error.message || 'Network error'}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const filteredWorkspaces = allWorkspaces.filter((w) =>
@@ -100,9 +152,13 @@ export default function WorkspaceSelector() {
         </div>
 
         <div className="workspace-actions">
-          <button className="create-workspace-btn">
+          <button 
+            className="create-workspace-btn"
+            onClick={handleCreateWorkspace}
+            disabled={isCreating}
+          >
             <Plus size={14} />
-            <span>Create New Workspace</span>
+            <span>{isCreating ? 'Creating...' : 'Create New Workspace'}</span>
           </button>
         </div>
       </div>

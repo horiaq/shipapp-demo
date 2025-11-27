@@ -3662,16 +3662,24 @@ app.get('/api/workspaces/:workspaceId', async (req, res) => {
 });
 
 // Create a new workspace
-app.post('/api/workspaces', async (req, res) => {
+app.post('/api/workspaces', authenticateUser, async (req, res) => {
   try {
     const workspaceData = req.body;
+    const userId = req.user.user_id; // From authenticateUser middleware
     
     if (!workspaceData.workspace_name) {
       return res.status(400).json({ success: false, error: 'workspace_name is required' });
     }
     
     const newWorkspace = await createWorkspace(workspaceData);
-    console.log(`✅ Created new workspace: ${newWorkspace.workspace_name}`);
+    
+    // Link the user to the new workspace as admin
+    await pool.query(
+      'INSERT INTO user_workspaces (user_id, workspace_id, role) VALUES ($1, $2, $3)',
+      [userId, newWorkspace.workspace_id, 'admin']
+    );
+    
+    console.log(`✅ Created new workspace: ${newWorkspace.workspace_name} for user ${userId}`);
     res.json({ success: true, workspace: newWorkspace });
   } catch (error) {
     console.error('Error creating workspace:', error);
