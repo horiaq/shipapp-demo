@@ -1094,6 +1094,11 @@ async function getOrder(orderName, workspaceId) {
 /**
  * Calculate order status based on order and voucher data
  * Status flow: unfulfilled -> awb_created -> sent -> in_transit -> delivered/returned -> completed
+ * 
+ * Priority:
+ * 1. Geniki tracking (real courier data) - HIGHEST PRIORITY
+ * 2. Shopify fulfillment status (fallback)
+ * 3. Voucher/AWB status
  */
 function calculateOrderStatus(order) {
   // Check if order has a voucher
@@ -1109,7 +1114,8 @@ function calculateOrderStatus(order) {
     return 'completed';
   }
   
-  // Check delivery status for returned/delivered/in_transit
+  // PRIORITY 1: Check Geniki tracking status (real courier data)
+  // This should ALWAYS take precedence over Shopify status
   if (hasVoucher && order.delivery_status) {
     const deliveryStatus = order.delivery_status.toUpperCase();
     const currentLocation = (order.current_location || '').toUpperCase();
@@ -1121,13 +1127,19 @@ function calculateOrderStatus(order) {
       return 'returned';
     }
     
-    // Check for delivered
+    // Check for delivered (from Geniki tracking)
     if (deliveryStatus.includes('DELIVERED')) {
       return 'delivered';
     }
     
     // Has tracking status but not delivered yet
     return 'in_transit';
+  }
+  
+  // PRIORITY 2: Check Shopify fulfillment status (fallback for orders without Geniki tracking)
+  // Only use this if there's NO Geniki tracking data yet
+  if (order.fulfillment_status === 'delivered' && !order.delivery_status) {
+    return 'delivered';
   }
   
   // Check if voucher was sent to Geniki (closed/pending)
