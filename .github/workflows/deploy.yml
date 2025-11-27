@@ -1,0 +1,36 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/shipapp-demo
+            git pull origin main
+            
+            # Install backend dependencies
+            npm install --production
+            
+            # Install and build frontend
+            cd frontend
+            npm install
+            npm run build
+            
+            # Restart services
+            pm2 restart all
+            
+            echo "✅ Deployment complete!"
+            pm2 status
+
