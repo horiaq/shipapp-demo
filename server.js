@@ -2886,21 +2886,40 @@ app.post('/api/sync-from-shopify', authenticateUser, authorizeWorkspace, async (
           continue;
         }
         
-        // Order is fulfilled in Shopify - update our database
+        // Order is fulfilled in Shopify - check delivery status
         const fulfillment = shopifyOrder.fulfillments[0];
         const fulfillmentId = fulfillment.id;
         const trackingNumber = fulfillment.tracking_number;
-        const fulfillmentStatus = fulfillment.status;
+        const shipmentStatus = fulfillment.shipment_status; // Can be: 'delivered', 'in_transit', 'out_for_delivery', 'attempted_delivery', 'ready_for_pickup', 'picked_up', 'label_printed', 'label_purchased', 'confirmed', 'failure', null
         
-        console.log(`✅ Order ${order.order_name} is fulfilled in Shopify (fulfillment ID: ${fulfillmentId})`);
+        // Determine the correct status based on Shopify's shipment status
+        let dbStatus = 'fulfilled'; // Default to fulfilled
+        let deliveredAt = null;
         
-        // Update orders table with fulfillment status
-        await pool.query(
-          `UPDATE orders 
-           SET fulfillment_status = 'fulfilled', shopify_order_id = $1
-           WHERE order_name = $2 AND workspace_id = $3`,
-          [shopifyOrderId, order.order_name, workspaceId]
-        );
+        if (shipmentStatus === 'delivered' || shipmentStatus === 'picked_up') {
+          dbStatus = 'delivered';
+          deliveredAt = new Date(); // Use current time as delivered time (Shopify doesn't always provide exact delivery time)
+          console.log(`✅ Order ${order.order_name} is DELIVERED in Shopify (fulfillment ID: ${fulfillmentId}, shipment_status: ${shipmentStatus})`);
+        } else {
+          console.log(`✅ Order ${order.order_name} is fulfilled in Shopify (fulfillment ID: ${fulfillmentId}, shipment_status: ${shipmentStatus || 'none'})`);
+        }
+        
+        // Update orders table with correct fulfillment/delivery status
+        if (dbStatus === 'delivered' && deliveredAt) {
+          await pool.query(
+            `UPDATE orders 
+             SET fulfillment_status = $1, shopify_order_id = $2, delivered_at = $3
+             WHERE order_name = $4 AND workspace_id = $5`,
+            [dbStatus, shopifyOrderId, deliveredAt, order.order_name, workspaceId]
+          );
+        } else {
+          await pool.query(
+            `UPDATE orders 
+             SET fulfillment_status = $1, shopify_order_id = $2
+             WHERE order_name = $3 AND workspace_id = $4`,
+            [dbStatus, shopifyOrderId, order.order_name, workspaceId]
+          );
+        }
         
         // If there's a voucher for this order, update it with fulfillment info
         const voucherResult = await pool.query(
@@ -2909,12 +2928,21 @@ app.post('/api/sync-from-shopify', authenticateUser, authorizeWorkspace, async (
         );
         
         if (voucherResult.rows.length > 0) {
-          await pool.query(
-            `UPDATE vouchers 
-             SET shopify_fulfillment_id = $1, shopify_order_id = $2
-             WHERE order_name = $3 AND workspace_id = $4`,
-            [fulfillmentId, shopifyOrderId, order.order_name, workspaceId]
-          );
+          if (dbStatus === 'delivered' && deliveredAt) {
+            await pool.query(
+              `UPDATE vouchers 
+               SET shopify_fulfillment_id = $1, shopify_order_id = $2, delivered_at = $3
+               WHERE order_name = $4 AND workspace_id = $5`,
+              [fulfillmentId, shopifyOrderId, deliveredAt, order.order_name, workspaceId]
+            );
+          } else {
+            await pool.query(
+              `UPDATE vouchers 
+               SET shopify_fulfillment_id = $1, shopify_order_id = $2
+               WHERE order_name = $3 AND workspace_id = $4`,
+              [fulfillmentId, shopifyOrderId, order.order_name, workspaceId]
+            );
+          }
         }
         
         synced++;
@@ -2922,10 +2950,11 @@ app.post('/api/sync-from-shopify', authenticateUser, authorizeWorkspace, async (
         results.push({
           orderName: order.order_name,
           success: true,
-          status: 'fulfilled',
+          status: dbStatus,
           fulfillmentId: fulfillmentId,
           trackingNumber: trackingNumber || 'No tracking',
-          message: 'Synced from Shopify'
+          shipmentStatus: shipmentStatus || 'none',
+          message: `Synced from Shopify as ${dbStatus}`
         });
         
         // Rate limiting: wait between requests
