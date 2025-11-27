@@ -32,7 +32,7 @@ export default function OrdersTable({
   currentFilter: externalFilter = 'All',
 }: OrdersTableProps) {
   const { currentWorkspace } = useWorkspace();
-  const currency = currentWorkspace?.invoice_currency || 'EUR';const { currentWorkspace } = useWorkspace();
+  const currency = currentWorkspace?.invoice_currency || 'EUR';
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
   const [filterOpen, setFilterOpen] = useState(false);
   const currentFilter = externalFilter;
