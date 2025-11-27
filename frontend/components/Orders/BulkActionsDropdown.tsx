@@ -132,7 +132,21 @@ export default function BulkActionsDropdown({
         </div>
         <div className="bulk-item" onClick={() => selectedCount > 0 && handleAction(onFulfill)}>
           <CheckCircle size={16} />
-          Fulfill Orders
+          Sync to Shopify
+          <span style={{
+            marginLeft: 'auto',
+            fontSize: '0.65rem',
+            fontWeight: '600',
+            padding: '0.15rem 0.4rem',
+            borderRadius: '4px',
+            background: 'linear-gradient(135deg, #95BF74, #56C568)',
+            color: 'white',
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+            boxShadow: '0 2px 4px rgba(86, 197, 104, 0.2)'
+          }}>
+            Create Fulfillment
+          </span>
         </div>
         <div className="bulk-item" onClick={() => selectedCount > 0 && onSyncFromShopify && handleAction(onSyncFromShopify)}>
           <ShoppingBag size={16} />
@@ -143,13 +157,13 @@ export default function BulkActionsDropdown({
             fontWeight: '600',
             padding: '0.15rem 0.4rem',
             borderRadius: '4px',
-            background: 'linear-gradient(135deg, #96bf48, #5e8e3e)',
+            background: 'linear-gradient(135deg, #5B8DEE, #0063F7)',
             color: 'white',
             letterSpacing: '0.5px',
             textTransform: 'uppercase',
-            boxShadow: '0 2px 4px rgba(150, 191, 72, 0.2)'
+            boxShadow: '0 2px 4px rgba(91, 141, 238, 0.2)'
           }}>
-            New
+            Pull Status
           </span>
         </div>
         <div className="bulk-item" onClick={() => selectedCount > 0 && handleAction(onCreateInvoices)}>
