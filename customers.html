@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers | NEXUS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        :root {
+            --bg-dark: #f8fafc;
+            --bg-panel: rgba(255, 255, 255, 0.7);
+            --bg-card: rgba(255, 255, 255, 0.5);
+            --primary: #06b6d4;
+            --primary-glow: rgba(6, 182, 212, 0.2);
+            --secondary: #8b5cf6;
+            --accent: #f43f5e;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-light: rgba(0, 0, 0, 0.05);
+            --sidebar-width: 280px;
+            --sidebar-width-collapsed: 80px;
+        }
+
+        body.dark-mode {
+            --bg-dark: #030712;
+            --bg-panel: rgba(17, 24, 39, 0.7);
+            --bg-card: rgba(31, 41, 55, 0.4);
+            --primary-glow: rgba(6, 182, 212, 0.5);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-light: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: var(--bg-panel);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+        }
+
+        /* Sidebar & Layout */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            border-right: 1px solid var(--border-light);
+            z-index: 50;
+            position: relative;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-width-collapsed);
+            padding: 2rem 1rem;
+        }
+
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .nav-item span,
+        .sidebar.collapsed .user-info,
+        .sidebar.collapsed .workspace-info,
+        .sidebar.collapsed .selector-chevron {
+            display: none;
+        }
+
+        .sidebar.collapsed .logo-container,
+        .sidebar.collapsed .nav-item,
+        .sidebar.collapsed .user-profile,
+        .sidebar.collapsed .workspace-selector {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 50%;
+            right: -12px;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            z-index: 60;
+        }
+
+        .logo-container {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-left: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .workspace-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            cursor: pointer;
+        }
+
+        .workspace-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: var(--primary);
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .user-profile {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            border: 1px solid var(--border-light);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header {
+            height: 80px;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 40;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(0, 0, 0, 0.03);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            width: 300px;
+        }
+
+        .search-bar input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-main);
+            width: 100%;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        /* --- CRAZY NETWORK ANIMATIONS --- */
+
+        .network-stage {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 80%);
+            perspective: 1000px;
+        }
+
+        /* Connecting Lines Grid */
+        .grid-lines {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background-image:
+                linear-gradient(rgba(6, 182, 212, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(6, 182, 212, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: rotateX(60deg) translateY(-20%) translateZ(-200px);
+            animation: grid-move 20s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes grid-move {
+            0% {
+                transform: rotateX(60deg) translateY(0) translateZ(-200px);
+            }
+
+            100% {
+                transform: rotateX(60deg) translateY(50px) translateZ(-200px);
+            }
+        }
+
+        /* Central Hub */
+        .central-hub {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 0 50px rgba(6, 182, 212, 0.3);
+            animation: pulse-hub 4s ease-in-out infinite;
+        }
+
+        .hub-core {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            z-index: 2;
+        }
+
+        .hub-ring {
+            position: absolute;
+            border: 1px solid var(--primary);
+            border-radius: 50%;
+            opacity: 0;
+            animation: ripple-out 3s infinite;
+        }
+
+        @keyframes pulse-hub {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 50px rgba(6, 182, 212, 0.3);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 80px rgba(6, 182, 212, 0.5);
+            }
+        }
+
+        @keyframes ripple-out {
+            0% {
+                width: 100%;
+                height: 100%;
+                opacity: 0.8;
+                border-width: 2px;
+            }
+
+            100% {
+                width: 300%;
+                height: 300%;
+                opacity: 0;
+                border-width: 0;
+            }
+        }
+
+        /* Orbiting Avatars */
+        .orbit-container {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            animation: rotate-orbit 20s linear infinite;
+            z-index: 5;
+        }
+
+        .orbit-container.reverse {
+            width: 400px;
+            height: 400px;
+            animation: rotate-orbit-rev 15s linear infinite;
+        }
+
+        .avatar-node {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            animation: counter-rotate 20s linear infinite;
+            /* Keeps avatars upright */
+        }
+
+        .avatar-node img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-node.a1 {
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .avatar-node.a2 {
+            bottom: 0;
+            left: 50%;
+            transform: translate(-50%, 50%);
+        }
+
+        .avatar-node.a3 {
+            top: 50%;
+            left: 0;
+            transform: translate(-50%, -50%);
+        }
+
+        .avatar-node.a4 {
+            top: 50%;
+            right: 0;
+            transform: translate(50%, -50%);
+        }
+
+        /* Connection Lines */
+        .connection-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            transform-origin: left center;
+            opacity: 0.3;
+            z-index: 1;
+        }
+
+        .l1 {
+            transform: rotate(0deg);
+            animation: scan-line 4s infinite;
+        }
+
+        .l2 {
+            transform: rotate(90deg);
+            animation: scan-line 4s infinite 1s;
+        }
+
+        .l3 {
+            transform: rotate(180deg);
+            animation: scan-line 4s infinite 2s;
+        }
+
+        .l4 {
+            transform: rotate(270deg);
+            animation: scan-line 4s infinite 3s;
+        }
+
+        @keyframes rotate-orbit {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes rotate-orbit-rev {
+            from {
+                transform: rotate(360deg);
+            }
+
+            to {
+                transform: rotate(0deg);
+            }
+        }
+
+        @keyframes counter-rotate {
+            from {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotate(-360deg);
+            }
+        }
+
+        @keyframes scan-line {
+            0% {
+                width: 0;
+                opacity: 0;
+            }
+
+            50% {
+                width: 300px;
+                opacity: 0.5;
+            }
+
+            100% {
+                width: 300px;
+                opacity: 0;
+            }
+        }
+
+        /* Live Activity Feed */
+        .activity-feed {
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 1rem;
+            z-index: 20;
+            overflow: hidden;
+        }
+
+        body.dark-mode .activity-feed {
+            background: rgba(15, 23, 42, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .feed-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        .feed-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .feed-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-main);
+            animation: slide-in 0.5s ease-out;
+        }
+
+        .feed-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+        }
+
+        @keyframes slide-in {
+            from {
+                transform: translateX(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Main Title Overlay */
+        .title-overlay {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 30;
+        }
+
+        .title-text {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 0.5rem;
+        }
+
+        body:not(.dark-mode) .title-text {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
+        }
+
+        .subtitle-text {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        body.dark-mode .subtitle-text {
+            background: rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar glass" id="sidebar">
+        <div class="sidebar-toggle" id="sidebarToggle">
+            <i data-feather="chevron-left" style="width: 14px; height: 14px;"></i>
+        </div>
+
+        <div class="logo-container">
+            <div class="app-brand">
+                <div class="logo-icon">
+                    <i data-feather="box" style="width: 18px; height: 18px;"></i>
+                </div>
+                <span class="logo-text">NEXUS</span>
+            </div>
+
+            <div class="workspace-selector">
+                <div class="workspace-icon">N</div>
+                <div class="workspace-info">
+                    <div style="font-size: 0.95rem; font-weight: 600;">NEXUS Store</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Admin</div>
+                </div>
+                <i data-feather="chevron-down" class="selector-chevron" style="width: 16px; height: 16px;"></i>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="index.html" class="nav-item">
+                <i data-feather="grid"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="orders.html" class="nav-item">
+                <i data-feather="shopping-cart"></i>
+                <span>Orders</span>
+            </a>
+            <a href="#" class="nav-item active">
+                <i data-feather="users"></i>
+                <span>Customers</span>
+            </a>
+            <a href="inventory.html" class="nav-item">
+                <i data-feather="package"></i>
+                <span>Inventory</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i data-feather="bar-chart-2"></i>
+                <span>Analytics</span>
+            </a>
+            <a href="settings.html" class="nav-item">
+                <i data-feather="settings"></i>
+                <span>Settings</span>
+            </a>
+        </nav>
+
+        <div class="user-profile">
+            <div class="avatar"></div>
+            <div class="user-info">
+                <h4>Alex Morgan</h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Admin</p>
+            </div>
+            <i data-feather="chevron-right" style="margin-left: auto; color: var(--text-muted); width: 16px;"></i>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header glass">
+            <div class="search-bar">
+                <i data-feather="search" style="width: 16px; color: var(--text-muted);"></i>
+                <input type="text" placeholder="Search customers...">
+            </div>
+
+            <div class="header-actions">
+                <div class="icon-btn">
+                    <i data-feather="bell"></i>
+                </div>
+                <div class="icon-btn">
+                    <i data-feather="mail"></i>
+                </div>
+                <div class="icon-btn" id="themeToggle">
+                    <i data-feather="sun"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Network Stage -->
+        <div class="network-stage">
+
+            <!-- 3D Grid Floor -->
+            <div class="grid-lines"></div>
+
+            <!-- Title Overlay -->
+            <div class="title-overlay">
+                <h1 class="title-text">Customer Intelligence</h1>
+                <div class="subtitle-text">Mapping connections. Analyzing behavior. Predicting needs.</div>
+            </div>
+
+            <!-- Central Hub -->
+            <div class="central-hub">
+                <div class="hub-core">
+                    <i data-feather="users"></i>
+                </div>
+                <div class="hub-ring" style="animation-delay: 0s;"></div>
+                <div class="hub-ring" style="animation-delay: 1s;"></div>
+                <div class="hub-ring" style="animation-delay: 2s;"></div>
+            </div>
+
+            <!-- Connecting Lines -->
+            <div class="connection-line l1"></div>
+            <div class="connection-line l2"></div>
+            <div class="connection-line l3"></div>
+            <div class="connection-line l4"></div>
+
+            <!-- Outer Orbit -->
+            <div class="orbit-container">
+                <div class="avatar-node a1" style="background: #e0f2fe; border-color: #38bdf8;">
+                    <i data-feather="user" style="color: #0284c7; width: 20px;"></i>
+                </div>
+                <div class="avatar-node a2" style="background: #f0fdf4; border-color: #4ade80;">
+                    <i data-feather="smile" style="color: #16a34a; width: 20px;"></i>
+                </div>
+                <div class="avatar-node a3" style="background: #fff1f2; border-color: #fb7185;">
+                    <i data-feather="heart" style="color: #e11d48; width: 20px;"></i>
+                </div>
+                <div class="avatar-node a4" style="background: #fff7ed; border-color: #fb923c;">
+                    <i data-feather="star" style="color: #ea580c; width: 20px;"></i>
+                </div>
+            </div>
+
+            <!-- Inner Orbit (Reverse) -->
+            <div class="orbit-container reverse">
+                <div class="avatar-node a1" style="background: #f5f3ff; border-color: #a78bfa;">
+                    <i data-feather="zap" style="color: #7c3aed; width: 20px;"></i>
+                </div>
+                <div class="avatar-node a2" style="background: #ecfdf5; border-color: #34d399;">
+                    <i data-feather="shopping-bag" style="color: #059669; width: 20px;"></i>
+                </div>
+            </div>
+
+            <!-- Live Activity Feed -->
+            <div class="activity-feed">
+                <div class="feed-title">
+                    <div class="live-dot"></div>
+                    LIVE ACTIVITY
+                </div>
+                <div class="feed-list" id="feedList">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        feather.replace();
+
+        // Sidebar Toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        
+        // Check local storage
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
+            sidebar.classList.add('collapsed');
+            sidebarToggle.innerHTML = '<i data-feather="chevron-right" style="width: 14px; height: 14px;"></i>';
+            feather.replace();
+        }
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            const collapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', collapsed);
+            
+            if (collapsed) {
+                sidebarToggle.innerHTML = '<i data-feather="chevron-right" style="width: 14px; height: 14px;"></i>';
+            } else {
+                sidebarToggle.innerHTML = '<i data-feather="chevron-left" style="width: 14px; height: 14px;"></i>';
+            }
+            feather.replace();
+        });
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+        const icon = themeToggle.querySelector('i');
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            if (body.classList.contains('dark-mode')) {
+                icon.setAttribute('data-feather', 'moon');
+            } else {
+                icon.setAttribute('data-feather', 'sun');
+            }
+            feather.replace();
+        });
+
+        // Live Feed Simulation
+        const feedList = document.getElementById('feedList');
+        const activities = [
+            { text: "New customer registered", time: "Just now" },
+            { text: "Order #1234 placed", time: "2s ago" },
+            { text: "Sarah viewed 'Wireless Headphones'", time: "5s ago" },
+            { text: "Support ticket #998 resolved", time: "12s ago" },
+            { text: "VIP status updated for Mike", time: "15s ago" }
+        ];
+
+        function addFeedItem() {
+            const item = activities[Math.floor(Math.random() * activities.length)];
+            const div = document.createElement('div');
+            div.className = 'feed-item';
+            div.innerHTML = `
+                <div class="feed-avatar"></div>
+                <div>
+                    <div style="font-weight: 500;">${item.text}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">${item.time}</div>
+                </div>
+            `;
+            
+            feedList.prepend(div);
+            
+            if (feedList.children.length > 4) {
+                feedList.lastElementChild.remove();
+            }
+        }
+
+        // Initial population
+        addFeedItem();
+        addFeedItem();
+        addFeedItem();
+
+        // Random updates
+        setInterval(addFeedItem, 3000);
+
+    </script>
+</body>
+
+</html>

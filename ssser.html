@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS | Advanced Order Systems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        :root {
+            /* Core Palette - Light Mode (Default) */
+            --bg-dark: #f8fafc;
+            /* Slate 50 */
+            --bg-panel: rgba(255, 255, 255, 0.7);
+            --bg-card: rgba(255, 255, 255, 0.5);
+
+            /* Accents */
+            --primary: #06b6d4;
+            /* Cyan 500 */
+            --primary-glow: rgba(6, 182, 212, 0.2);
+            --secondary: #8b5cf6;
+            /* Violet 500 */
+            --accent: #f43f5e;
+            /* Rose 500 */
+
+            /* Text */
+            --text-main: #0f172a;
+            /* Slate 900 */
+            --text-muted: #64748b;
+            /* Slate 500 */
+            --text-dim: #94a3b8;
+            /* Slate 400 */
+
+            /* Borders */
+            --border-light: rgba(0, 0, 0, 0.05);
+            --border-glow: rgba(6, 182, 212, 0.3);
+
+            /* Spacing */
+            --sidebar-width: 280px;
+            --sidebar-width-collapsed: 80px;
+            --header-height: 80px;
+        }
+
+        /* Dark Mode Overrides */
+        body.dark-mode {
+            --bg-dark: #030712;
+            --bg-panel: rgba(17, 24, 39, 0.7);
+            --bg-card: rgba(31, 41, 55, 0.4);
+
+            --primary-glow: rgba(6, 182, 212, 0.5);
+
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #475569;
+
+            --border-light: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Adjust gradients for dark mode */
+        body.dark-mode {
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
+        }
+
+        /* Adjust glass effects for dark mode */
+        body.dark-mode .glass {
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode .glass-card {
+            box-shadow: none;
+        }
+
+        body.dark-mode .glass-card:hover {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+        }
+
+        /* Adjust logo text for dark mode */
+        body.dark-mode .logo-text {
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Adjust hover states for dark mode */
+        body.dark-mode .nav-item:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        body.dark-mode .search-bar input {
+            background: rgba(255, 255, 255, 0.03);
+            color: #fff;
+        }
+
+        body.dark-mode .search-bar input:focus {
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        body.dark-mode .icon-btn {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        body.dark-mode .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-mode .user-profile {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        body.dark-mode .avatar {
+            background: linear-gradient(45deg, #333, #555);
+            border-color: var(--primary);
+        }
+
+        body.dark-mode .avatar::after {
+            border-color: var(--bg-dark);
+        }
+
+        body.dark-mode .stat-value {
+            color: #fff;
+        }
+
+        body.dark-mode tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        body.dark-mode .chart-title {
+            color: #fff;
+        }
+
+        body.dark-mode .profile-dropdown {
+            background: rgba(17, 24, 39, 0.9);
+            border-color: var(--border-light);
+        }
+
+        body.dark-mode .profile-menu-item {
+            color: var(--text-muted);
+        }
+
+        body.dark-mode .profile-menu-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+
+        body.dark-mode .profile-menu-item.logout {
+            border-top-color: var(--border-light);
+        }
+
+        body.dark-mode .profile-menu-item.logout:hover {
+            background: rgba(244, 63, 94, 0.15);
+        }
+
+        body.dark-mode th {
+            color: var(--text-muted);
+            border-bottom-color: var(--border-light);
+        }
+
+        body.dark-mode td {
+            color: var(--text-main);
+            border-bottom-color: var(--border-light);
+        }
+
+        body.dark-mode tr:hover td {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--bg-dark);
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Typography */
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: var(--bg-panel);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-glow);
+            box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.15), 0 8px 10px -6px rgba(6, 182, 212, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            border-right: 1px solid var(--border-light);
+            z-index: 50;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-width-collapsed);
+            padding: 2rem 1rem;
+        }
+
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .nav-item span,
+        .sidebar.collapsed .user-info,
+        .sidebar.collapsed .user-profile i {
+            display: none;
+            opacity: 0;
+        }
+
+        .sidebar.collapsed .logo-container {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .sidebar.collapsed .user-profile {
+            justify-content: center;
+            padding: 0.75rem;
+        }
+
+        /* Sidebar Toggle Button */
+        .sidebar-toggle {
+            position: absolute;
+            top: 50%;
+            right: -12px;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            z-index: 60;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* Delivery Widget */
+        .delivery-widget {
+            margin: 1rem 0 1.5rem;
+            padding: 1rem;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar.collapsed .delivery-widget {
+            display: none;
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .widget-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .time-selector {
+            position: relative;
+        }
+
+        .time-trigger {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+        }
+
+        .time-trigger:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        .time-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 0.5rem;
+            min-width: 100px;
+            display: none;
+            flex-direction: column;
+            gap: 0.25rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+        }
+
+        .time-dropdown.show {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .time-option {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .time-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        .time-option.active {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--primary);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .stat-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot-delivery {
+            background: #3b82f6;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        }
+
+        .dot-delivered {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+
+        .dot-returned {
+            background: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+
+        .stat-value-sm {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Adjust Main Content when sidebar is collapsed */
+        /* Note: Since sidebar is flex, main content auto-adjusts, but we might want a transition on main content if it wasn't flex */
+
+        .logo-container {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: relative;
+        }
+
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-left: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px var(--primary-glow);
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #0f172a, #475569);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .workspace-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .workspace-selector::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .workspace-selector:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: var(--border-glow);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .workspace-selector:hover::before {
+            opacity: 1;
+        }
+
+        .workspace-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: 0 2px 8px var(--primary-glow);
+            position: relative;
+            z-index: 1;
+        }
+
+        .workspace-info {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .workspace-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .workspace-role {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .workspace-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            margin-top: 0.5rem;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 0.5rem;
+            display: none;
+            flex-direction: column;
+            gap: 0.25rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(-10px) scale(0.98);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .workspace-dropdown.show {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .workspace-search {
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+            position: relative;
+        }
+
+        .workspace-search input {
+            width: 100%;
+            padding: 0.5rem 0.75rem 0.5rem 2rem;
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .workspace-search input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .workspace-search svg {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            width: 14px;
+            height: 14px;
+        }
+
+        .workspace-list {
+            max-height: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .workspace-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .workspace-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .workspace-item.active {
+            background: rgba(6, 182, 212, 0.08);
+            border-color: rgba(6, 182, 212, 0.2);
+        }
+
+        .workspace-item .item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #475569;
+            font-size: 1rem;
+        }
+
+        .workspace-item.active .item-icon {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 2px 8px var(--primary-glow);
+        }
+
+        .workspace-actions {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .create-workspace-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.6rem;
+            border-radius: 8px;
+            background: transparent;
+            border: 1px dashed var(--border-light);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .create-workspace-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(6, 182, 212, 0.05);
+        }
+
+        body.dark-mode .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        body.dark-mode .dropdown-icon {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item:hover {
+            color: var(--primary);
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .user-profile {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .user-profile:hover {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: var(--border-glow);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .profile-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            width: 100%;
+            margin-bottom: 0.75rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 0.5rem;
+            display: none;
+            flex-direction: column;
+            gap: 0.25rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(10px) scale(0.98);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .profile-dropdown.show {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .profile-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .profile-menu-item:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--primary);
+        }
+
+        .profile-menu-item.logout {
+            color: var(--accent);
+            border-top: 1px solid var(--border-light);
+            margin-top: 0.25rem;
+            padding-top: 0.75rem;
+            border-radius: 0 0 10px 10px;
+        }
+
+        .profile-menu-item.logout:hover {
+            background: rgba(244, 63, 94, 0.1);
+        }
+
+        .profile-menu-item svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #cbd5e1, #94a3b8);
+            border: 2px solid var(--primary);
+            position: relative;
+        }
+
+        .avatar::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .user-info h4 {
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .user-info p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .search-bar {
+            position: relative;
+            width: 400px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border-light);
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border-radius: 12px;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+            background: #fff;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            width: 18px;
+            height: 18px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border-light);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--primary);
+        }
+
+        .notification-dot {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 5px var(--accent);
+        }
+
+        /* Dashboard Content */
+        .dashboard-container {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 1rem;
+        }
+
+        .page-title h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #0f172a, #64748b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        body.dark-mode .page-title h1 {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+        }
+
+        .action-btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), #0891b2);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .stat-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .trend-up {
+            color: #10b981;
+        }
+
+        .trend-down {
+            color: var(--accent);
+        }
+
+        /* Charts Section */
+        .charts-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            height: 350px;
+        }
+
+        .chart-container {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .chart-area {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding-top: 2rem;
+            gap: 10px;
+        }
+
+        /* Simulated Bar Chart */
+        .bar {
+            flex: 1;
+            background: linear-gradient(to top, rgba(6, 182, 212, 0.4), rgba(6, 182, 212, 0.9));
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: height 1s ease;
+            min-height: 10%;
+        }
+
+        .bar:hover {
+            background: var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        /* Recent Orders Table */
+        .table-container {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem 1.5rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.875rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        td {
+            padding: 1rem 1.5rem;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border-light);
+            transition: background 0.2s;
+        }
+
+        tr:hover td {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* Payment Badges */
+        .amount-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .payment-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            cursor: help;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-badge svg {
+            width: 12px;
+            height: 12px;
+            stroke-width: 2.5;
+        }
+
+        /* Card Style */
+        .payment-badge.card {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+
+        .payment-badge.card:hover {
+            background: rgba(6, 182, 212, 0.2);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* COD Style */
+        .payment-badge.cod {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .payment-badge.cod:hover {
+            background: rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* Dark Mode Overrides for Badges */
+        body.dark-mode .payment-badge.card {
+            background: rgba(6, 182, 212, 0.15);
+            border-color: rgba(6, 182, 212, 0.3);
+        }
+
+        body.dark-mode .payment-badge.cod {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+
+
+        .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .status-completed {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-completed::before {
+            background: #10b981;
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .status-pending::before {
+            background: #f59e0b;
+        }
+
+        .status-processing {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .status-processing::before {
+            background: #3b82f6;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        .floating {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar glass" id="sidebar">
+        <div class="sidebar-toggle" id="sidebarToggle">
+            <i data-feather="chevron-left" style="width: 14px; height: 14px;"></i>
+        </div>
+
+        <div class="logo-container">
+            <div class="app-brand">
+                <div class="logo-icon">
+                    <i data-feather="box" style="width: 18px; height: 18px;"></i>
+                </div>
+                <span class="logo-text">NEXUS</span>
+            </div>
+
+            <div class="workspace-selector" id="workspaceSelector">
+                <div class="workspace-icon">N</div>
+                <div class="workspace-info">
+                    <div class="workspace-name">NEXUS Store</div>
+                    <div class="workspace-role">
+                        <span>Admin</span>
+                        <div style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted);"></div>
+                        <span style="color: var(--primary);">Pro</span>
+                    </div>
+                </div>
+                <i data-feather="chevron-down" class="selector-chevron"
+                    style="width: 16px; height: 16px; color: var(--text-muted);"></i>
+            </div>
+
+            <div class="workspace-dropdown" id="workspaceDropdown">
+                <div class="workspace-search">
+                    <i data-feather="search"></i>
+                    <input type="text" id="workspaceSearch" placeholder="Find workspace...">
+                </div>
+                <div class="workspace-list" id="workspaceList">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="workspace-actions">
+                    <button class="create-workspace-btn">
+                        <i data-feather="plus" style="width: 14px; height: 14px;"></i>
+                        <span>Create New Workspace</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active">
+                <i data-feather="grid"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i data-feather="shopping-cart"></i>
+                <span>Orders</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i data-feather="users"></i>
+                <span>Customers</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i data-feather="package"></i>
+                <span>Inventory</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i data-feather="bar-chart-2"></i>
+                <span>Analytics</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i data-feather="settings"></i>
+                <span>Settings</span>
+            </a>
+        </nav>
+
+        <!-- Delivery Status Widget -->
+        <div class="delivery-widget glass-card">
+            <div class="widget-header">
+                <span class="widget-title">Delivery Status</span>
+                <div class="time-selector">
+                    <div class="time-trigger" id="timeTrigger">
+                        <span id="currentTime">7d</span>
+                        <i data-feather="chevron-down" style="width: 12px; height: 12px;"></i>
+                    </div>
+                    <div class="time-dropdown" id="timeDropdown">
+                        <div class="time-option" data-period="24h">Last 24 Hours</div>
+                        <div class="time-option active" data-period="7d">Last 7 Days</div>
+                        <div class="time-option" data-period="30d">Last 30 Days</div>
+                    </div>
+                </div>
+            </div>
+            <div class="widget-content">
+                <div class="stat-row">
+                    <div class="stat-label">
+                        <div class="stat-dot dot-delivery"></div>
+                        <span>In Delivery</span>
+                    </div>
+                    <span class="stat-value-sm" data-stat="in-delivery">67</span>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-label">
+                        <div class="stat-dot dot-delivered"></div>
+                        <span>Delivered</span>
+                    </div>
+                    <span class="stat-value-sm" data-stat="delivered">30</span>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-label">
+                        <div class="stat-dot dot-returned"></div>
+                        <span>Returned</span>
+                    </div>
+                    <span class="stat-value-sm" data-stat="returned">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="user-profile" id="userProfile">
+            <div class="profile-dropdown" id="profileDropdown">
+                <a href="#" class="profile-menu-item">
+                    <i data-feather="user"></i>
+                    <span>My Profile</span>
+                </a>
+                <a href="#" class="profile-menu-item">
+                    <i data-feather="settings"></i>
+                    <span>Settings</span>
+                </a>
+                <a href="#" class="profile-menu-item">
+                    <i data-feather="help-circle"></i>
+                    <span>Help Center</span>
+                </a>
+                <div class="profile-menu-item logout">
+                    <i data-feather="log-out"></i>
+                    <span>Logout</span>
+                </div>
+            </div>
+            <div class="avatar"></div>
+            <div class="user-info">
+                <h4>Alex Morgan</h4>
+                <p>Admin</p>
+            </div>
+            <i data-feather="chevron-right" class="profile-chevron"
+                style="margin-left: auto; color: var(--text-muted); width: 16px; transition: transform 0.3s ease;"></i>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header glass">
+            <div class="search-bar">
+                <i data-feather="search" class="search-icon"></i>
+                <input type="text" placeholder="Search orders, products, or customers...">
+            </div>
+
+            <div class="header-actions">
+                <div class="icon-btn">
+                    <i data-feather="bell"></i>
+                    <span class="notification-dot"></span>
+                </div>
+                <div class="icon-btn">
+                    <i data-feather="mail"></i>
+                </div>
+                <div class="icon-btn" id="themeToggle">
+                    <i data-feather="sun"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-container">
+
+            <div class="page-header">
+                <div class="page-title">
+                    <h1>Dashboard Overview</h1>
+                    <p>Welcome back, here's what's happening today.</p>
+                </div>
+                <button class="action-btn">
+                    <i data-feather="plus"></i>
+                    New Order
+                </button>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="glass-card stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: rgba(6, 182, 212, 0.1); color: var(--primary);">
+                            <i data-feather="dollar-sign"></i>
+                        </div>
+                        <div class="stat-trend trend-up">
+                            <i data-feather="trending-up" style="width: 14px;"></i>
+                            <span>+12.5%</span>
+                        </div>
+                    </div>
+                    <div class="stat-value">$48,250</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+
+                <div class="glass-card stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--secondary);">
+                            <i data-feather="shopping-bag"></i>
+                        </div>
+                        <div class="stat-trend trend-up">
+                            <i data-feather="trending-up" style="width: 14px;"></i>
+                            <span>+8.2%</span>
+                        </div>
+                    </div>
+                    <div class="stat-value">1,240</div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+
+                <div class="glass-card stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: rgba(244, 63, 94, 0.1); color: var(--accent);">
+                            <i data-feather="activity"></i>
+                        </div>
+                        <div class="stat-trend trend-down">
+                            <i data-feather="trending-down" style="width: 14px;"></i>
+                            <span>-2.4%</span>
+                        </div>
+                    </div>
+                    <div class="stat-value">85%</div>
+                    <div class="stat-label">Conversion Rate</div>
+                </div>
+
+                <div class="glass-card stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                            <i data-feather="users"></i>
+                        </div>
+                        <div class="stat-trend trend-up">
+                            <i data-feather="trending-up" style="width: 14px;"></i>
+                            <span>+5.1%</span>
+                        </div>
+                    </div>
+                    <div class="stat-value">3,820</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="charts-section">
+                <div class="glass-card chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Revenue Analytics</h3>
+                        <div class="icon-btn" style="width: 32px; height: 32px;">
+                            <i data-feather="more-horizontal" style="width: 16px;"></i>
+                        </div>
+                    </div>
+                    <div class="chart-area" id="revenueChart">
+                        <!-- Bars generated by JS -->
+                    </div>
+                </div>
+
+                <div class="glass-card chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Order Status</h3>
+                    </div>
+                    <div
+                        style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <!-- Simple CSS Donut Chart -->
+                        <div
+                            style="width: 160px; height: 160px; border-radius: 50%; background: conic-gradient(var(--primary) 0% 60%, var(--secondary) 60% 85%, var(--accent) 85% 100%); position: relative; display: flex; align-items: center; justify-content: center;">
+                            <div
+                                style="width: 120px; height: 120px; background: rgba(255, 255, 255, 0.8); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+                                <span style="font-size: 1.5rem; font-weight: 700; color: var(--text-main);">1,240</span>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">Total</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
+                        <div
+                            style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+                            <span
+                                style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary);"></span>
+                            Completed
+                        </div>
+                        <div
+                            style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+                            <span
+                                style="width: 8px; height: 8px; border-radius: 50%; background: var(--secondary);"></span>
+                            Pending
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="glass-card table-container">
+                <div class="table-header">
+                    <h3 class="chart-title">Recent Orders</h3>
+                    <div class="header-actions">
+                        <div class="search-bar" style="width: 250px;">
+                            <i data-feather="filter" class="search-icon" style="width: 14px;"></i>
+                            <input type="text" placeholder="Filter orders..."
+                                style="padding: 0.5rem 1rem 0.5rem 2.5rem; font-size: 0.875rem;">
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>#ORD-7235</td>
+                                <td style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #cbd5e1;">
+                                    </div>
+                                    <span>Sarah Connor</span>
+                                </td>
+                                <td>Neural Net Processor</td>
+                                <td>Oct 24, 2025</td>
+                                <td>
+                                    <div class="amount-wrapper">
+                                        $1,299.00
+                                        <div class="payment-badge card" title="Paid by Card">
+                                            <i data-feather="credit-card"></i>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Completed</span></td>
+                                <td><i data-feather="more-vertical"
+                                        style="width: 16px; cursor: pointer; color: var(--text-muted);"></i></td>
+                            </tr>
+                            <tr>
+                                <td>#ORD-7234</td>
+                                <td style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #94a3b8;">
+                                    </div>
+                                    <span>John Wick</span>
+                                </td>
+                                <td>Tactical Suit v2</td>
+                                <td>Oct 24, 2025</td>
+                                <td>
+                                    <div class="amount-wrapper">
+                                        $850.00
+                                        <div class="payment-badge cod" title="Cash on Delivery">
+                                            <i data-feather="dollar-sign"></i>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="status-badge status-processing">Processing</span></td>
+                                <td><i data-feather="more-vertical"
+                                        style="width: 16px; cursor: pointer; color: var(--text-muted);"></i></td>
+                            </tr>
+                            <tr>
+                                <td>#ORD-7233</td>
+                                <td style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #cbd5e1;">
+                                    </div>
+                                    <span>Bruce Wayne</span>
+                                </td>
+                                <td>Grappling Hook</td>
+                                <td>Oct 23, 2025</td>
+                                <td>
+                                    <div class="amount-wrapper">
+                                        $450.00
+                                        <div class="payment-badge card" title="Paid by Card">
+                                            <i data-feather="credit-card"></i>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="status-badge status-pending">Pending</span></td>
+                                <td><i data-feather="more-vertical"
+                                        style="width: 16px; cursor: pointer; color: var(--text-muted);"></i></td>
+                            </tr>
+                            <tr>
+                                <td>#ORD-7232</td>
+                                <td style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #94a3b8;">
+                                    </div>
+                                    <span>Tony Stark</span>
+                                </td>
+                                <td>Arc Reactor Core</td>
+                                <td>Oct 23, 2025</td>
+                                <td>
+                                    <div class="amount-wrapper">
+                                        $5,000.00
+                                        <div class="payment-badge cod" title="Cash on Delivery">
+                                            <i data-feather="dollar-sign"></i>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="status-badge status-completed">Completed</span></td>
+                                <td><i data-feather="more-vertical"
+                                        style="width: 16px; cursor: pointer; color: var(--text-muted);"></i></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Initialize Feather Icons
+        feather.replace();
+
+        // Generate Random Bars for Chart
+        const chartArea = document.getElementById('revenueChart');
+        for (let i = 0; i < 12; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            // Random height between 30% and 100%
+            const height = Math.floor(Math.random() * 70) + 30;
+            bar.style.height = `${height}%`;
+            bar.title = `Month ${i + 1}: $${height * 1000}`;
+            chartArea.appendChild(bar);
+        }
+
+        // Simple interactivity
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function (e) {
+                // Only prevent default if it's a dummy link
+                if (this.getAttribute('href') === '#') {
+                    e.preventDefault();
+                }
+                // Don't remove active class from other items here, let the page load handle it
+                // or only do it for visual feedback if staying on same page
+            });
+        });
+
+        // Sidebar Toggle Logic
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+
+        // Check local storage
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
+            sidebar.classList.add('collapsed');
+            sidebarToggle.innerHTML = '<i data-feather="chevron-right" style="width: 14px; height: 14px;"></i>';
+            feather.replace();
+        }
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            const collapsed = sidebar.classList.contains('collapsed');
+
+            localStorage.setItem('sidebarCollapsed', collapsed);
+
+            if (collapsed) {
+                sidebarToggle.innerHTML = '<i data-feather="chevron-right" style="width: 14px; height: 14px;"></i>';
+            } else {
+                sidebarToggle.innerHTML = '<i data-feather="chevron-left" style="width: 14px; height: 14px;"></i>';
+            }
+            feather.replace();
+        });
+
+        // Workspace Switcher Logic
+        const workspaceSelector = document.getElementById('workspaceSelector');
+        const workspaceDropdown = document.getElementById('workspaceDropdown');
+        const selectorChevron = workspaceSelector.querySelector('.selector-chevron');
+        const workspaceSearch = document.getElementById('workspaceSearch');
+        const workspaceList = document.getElementById('workspaceList');
+
+        // Mock Data
+        const workspaces = [
+            { id: 1, name: 'NEXUS Store', url: 'nexus.etrack.com', icon: 'N', active: true },
+            { id: 2, name: 'Alpha Logistics', url: 'alpha.etrack.com', icon: 'A', active: false },
+            { id: 3, name: 'Beta Warehouse', url: 'beta.etrack.com', icon: 'B', active: false },
+            { id: 4, name: 'Gamma Distribution', url: 'gamma.etrack.com', icon: 'G', active: false },
+            { id: 5, name: 'Delta Shipping', url: 'delta.etrack.com', icon: 'D', active: false }
+        ];
+
+        function renderWorkspaces(filter = '') {
+            workspaceList.innerHTML = '';
+            const filtered = workspaces.filter(w => w.name.toLowerCase().includes(filter.toLowerCase()));
+
+            filtered.forEach(w => {
+                const item = document.createElement('div');
+                item.className = `workspace-item ${w.active ? 'active' : ''}`;
+                item.innerHTML = `
+                    <div class="item-icon">${w.icon}</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 0.875rem; font-weight: 600; color: var(--text-main);">${w.name}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">${w.url}</div>
+                    </div>
+                    ${w.active ? '<i data-feather="check" style="width: 16px; color: var(--primary);"></i>' : ''}
+                `;
+                item.addEventListener('click', () => selectWorkspace(w));
+                workspaceList.appendChild(item);
+            });
+            feather.replace();
+        }
+
+        function selectWorkspace(workspace) {
+            workspaces.forEach(w => w.active = (w.id === workspace.id));
+
+            // Update UI
+            workspaceSelector.querySelector('.workspace-name').textContent = workspace.name;
+            workspaceSelector.querySelector('.workspace-icon').textContent = workspace.icon;
+
+            renderWorkspaces(workspaceSearch.value);
+            workspaceDropdown.classList.remove('show');
+            selectorChevron.style.transform = 'rotate(0deg)';
+        }
+
+        workspaceSelector.addEventListener('click', (e) => {
+            e.stopPropagation();
+            workspaceDropdown.classList.toggle('show');
+            selectorChevron.style.transform = workspaceDropdown.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
+            if (workspaceDropdown.classList.contains('show')) {
+                workspaceSearch.focus();
+            }
+        });
+
+        workspaceSearch.addEventListener('input', (e) => {
+            renderWorkspaces(e.target.value);
+        });
+
+        workspaceSearch.addEventListener('click', (e) => e.stopPropagation());
+
+        document.addEventListener('click', (e) => {
+            if (!workspaceSelector.contains(e.target) && !workspaceDropdown.contains(e.target)) {
+                workspaceDropdown.classList.remove('show');
+                selectorChevron.style.transform = 'rotate(0deg)';
+            }
+        });
+
+        // Initial Render
+        renderWorkspaces();
+
+        // Theme Switcher Logic
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+        const icon = themeToggle.querySelector('i');
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+
+            if (body.classList.contains('dark-mode')) {
+                themeToggle.innerHTML = '<i data-feather="moon" style="width: 20px; height: 20px;"></i>';
+            } else {
+                themeToggle.innerHTML = '<i data-feather="sun" style="width: 20px; height: 20px;"></i>';
+            }
+
+            feather.replace();
+        });
+
+        // Delivery Widget Logic
+        const deliveryStats = {
+            '24h': { 'in-delivery': 12, 'delivered': 8, 'returned': 0 },
+            '7d': { 'in-delivery': 67, 'delivered': 30, 'returned': 2 },
+            '30d': { 'in-delivery': 245, 'delivered': 180, 'returned': 15 }
+        };
+
+        const timeTrigger = document.getElementById('timeTrigger');
+        const timeDropdown = document.getElementById('timeDropdown');
+        const currentTime = document.getElementById('currentTime');
+        const timeOptions = document.querySelectorAll('.time-option');
+        const statValues = document.querySelectorAll('.stat-value-sm');
+        const triggerIcon = timeTrigger.querySelector('i');
+
+        // Toggle Dropdown
+        timeTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            timeDropdown.classList.toggle('show');
+            triggerIcon.style.transform = timeDropdown.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
+        });
+
+        // Handle Option Click
+        timeOptions.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Update active state
+                timeOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+
+                // Update Trigger Text (short version)
+                const period = option.dataset.period;
+                currentTime.textContent = period;
+
+                // Update stats with animation
+                const data = deliveryStats[period];
+                statValues.forEach(stat => {
+                    const key = stat.dataset.stat;
+                    const target = data[key];
+                    animateValue(stat, parseInt(stat.textContent), target, 500);
+                });
+
+                // Close Dropdown
+                timeDropdown.classList.remove('show');
+                triggerIcon.style.transform = 'rotate(0deg)';
+            });
+        });
+
+        // Close on Outside Click
+        document.addEventListener('click', (e) => {
+            if (!timeTrigger.contains(e.target) && !timeDropdown.contains(e.target)) {
+                timeDropdown.classList.remove('show');
+                if (triggerIcon) triggerIcon.style.transform = 'rotate(0deg)';
+            }
+        });
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+
+        // Profile Dropdown Logic
+        const userProfile = document.getElementById('userProfile');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const profileChevron = userProfile.querySelector('.profile-chevron');
+
+        userProfile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isExpanded = profileDropdown.classList.contains('show');
+
+            // Close other dropdowns if any (optional, good practice)
+            document.querySelectorAll('.dropdown.show').forEach(d => d.classList.remove('show'));
+
+            if (isExpanded) {
+                profileDropdown.classList.remove('show');
+                if (profileChevron) profileChevron.style.transform = 'rotate(0deg)';
+            } else {
+                profileDropdown.classList.add('show');
+                if (profileChevron) profileChevron.style.transform = 'rotate(-90deg)';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!userProfile.contains(e.target)) {
+                profileDropdown.classList.remove('show');
+                if (profileChevron) profileChevron.style.transform = 'rotate(0deg)';
+            }
+        });
+    </script>
+</body>
+
+</html>

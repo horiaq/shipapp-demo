@@ -1,0 +1,144 @@
+<!-- Unified Sidebar Component for NEXUS -->
+<!-- Copy this exact structure to all pages -->
+
+<aside class="sidebar glass" id="sidebar">
+    <div class="sidebar-toggle" id="sidebarToggle">
+        <i data-feather="chevron-left" style="width: 14px; height: 14px;"></i>
+    </div>
+
+    <div class="logo-container">
+        <div class="app-brand">
+            <div class="logo-icon">
+                <i data-feather="box" style="width: 18px; height: 18px;"></i>
+            </div>
+            <span class="logo-text">NEXUS</span>
+        </div>
+
+        <div class="workspace-selector" id="workspaceSelector">
+            <div class="workspace-icon">N</div>
+            <div class="workspace-info">
+                <div class="workspace-name">NEXUS Store</div>
+                <div class="workspace-role">
+                    <span>Admin</span>
+                    <div style="width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted);"></div>
+                    <span style="color: var(--primary);">Pro</span>
+                </div>
+            </div>
+            <i data-feather="chevron-down" class="selector-chevron"
+                style="width: 16px; height: 16px; color: var(--text-muted);"></i>
+        </div>
+
+        <div class="workspace-dropdown" id="workspaceDropdown">
+            <div class="workspace-search">
+                <i data-feather="search"></i>
+                <input type="text" id="workspaceSearch" placeholder="Find workspace...">
+            </div>
+            <div class="workspace-list" id="workspaceList">
+                <!-- Populated by JS -->
+            </div>
+            <div class="workspace-actions">
+                <button class="create-workspace-btn">
+                    <i data-feather="plus" style="width: 14px; height: 14px;"></i>
+                    <span>Create New Workspace</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="nav-menu">
+        <a href="#" class="nav-item" data-page="dashboard">
+            <i data-feather="grid"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="orders">
+            <i data-feather="shopping-cart"></i>
+            <span>Orders</span>
+        </a>
+        <a href="#" class="nav-item" data-page="customers">
+            <i data-feather="users"></i>
+            <span>Customers</span>
+        </a>
+        <a href="#" class="nav-item" data-page="inventory">
+            <i data-feather="package"></i>
+            <span>Inventory</span>
+        </a>
+        <a href="#" class="nav-item" data-page="analytics">
+            <i data-feather="bar-chart-2"></i>
+            <span>Analytics</span>
+        </a>
+        <a href="#" class="nav-item" data-page="settings">
+            <i data-feather="settings"></i>
+            <span>Settings</span>
+        </a>
+    </nav>
+
+    <!-- Delivery Status Widget -->
+    <div class="delivery-widget glass-card">
+        <div class="widget-header">
+            <span class="widget-title">Delivery Status</span>
+            <div class="time-selector">
+                <div class="time-trigger" id="timeTrigger">
+                    <span id="currentTime">7d</span>
+                    <i data-feather="chevron-down" style="width: 12px; height: 12px;"></i>
+                </div>
+                <div class="time-dropdown" id="timeDropdown">
+                    <div class="time-option" data-period="24h">Last 24 Hours</div>
+                    <div class="time-option active" data-period="7d">Last 7 Days</div>
+                    <div class="time-option" data-period="30d">Last 30 Days</div>
+                </div>
+            </div>
+        </div>
+        <div class="widget-content">
+            <div class="stat-row">
+                <div class="stat-label">
+                    <div class="stat-dot dot-delivery"></div>
+                    <span>In Delivery</span>
+                </div>
+                <span class="stat-value-sm" data-stat="in-delivery">67</span>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label">
+                    <div class="stat-dot dot-delivered"></div>
+                    <span>Delivered</span>
+                </div>
+                <span class="stat-value-sm" data-stat="delivered">30</span>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label">
+                    <div class="stat-dot dot-returned"></div>
+                    <span>Returned</span>
+                </div>
+                <span class="stat-value-sm" data-stat="returned">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="user-profile" id="userProfile">
+        <div class="profile-dropdown" id="profileDropdown">
+            <a href="#" class="profile-menu-item">
+                <i data-feather="user"></i>
+                <span>My Profile</span>
+            </a>
+            <a href="#" class="profile-menu-item">
+                <i data-feather="settings"></i>
+                <span>Settings</span>
+            </a>
+            <a href="#" class="profile-menu-item">
+                <i data-feather="help-circle"></i>
+                <span>Help Center</span>
+            </a>
+            <div class="profile-menu-item logout">
+                <i data-feather="log-out"></i>
+                <span>Logout</span>
+            </div>
+        </div>
+        <div class="avatar"></div>
+        <div class="user-info">
+            <h4>Alex Morgan</h4>
+            <p>Admin</p>
+        </div>
+        <i data-feather="chevron-right" class="profile-chevron"
+            style="margin-left: auto; color: var(--text-muted); width: 16px; transition: transform 0.3s ease;"></i>
+    </div>
+</aside>
+

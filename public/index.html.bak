@@ -1,0 +1,2771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geniki Taxydromiki - Order Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.css">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8fafc;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        /* Dashboard Layout */
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease, width 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .sidebar.collapsed .sidebar-header .subtitle,
+        .sidebar.collapsed .nav-item span {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .sidebar.collapsed .logo {
+            font-size: 1.5rem;
+        }
+
+        .sidebar-header {
+            padding: 0 2rem 2rem 2rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        /* Workspace Switcher */
+        .workspace-switcher {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .workspace-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .workspace-current {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .workspace-current:hover {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .workspace-name {
+            font-weight: 600;
+            color: #3b82f6;
+            font-size: 0.875rem;
+        }
+
+        .workspace-dropdown {
+            display: none;
+            margin-top: 0.5rem;
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .workspace-dropdown.active {
+            display: block;
+        }
+
+        .workspace-option {
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #cbd5e1;
+            font-size: 0.875rem;
+        }
+
+        .workspace-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .workspace-option.selected {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .workspace-add {
+            margin-top: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px dashed rgba(34, 197, 94, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            color: #22c55e;
+            font-size: 0.875rem;
+            text-align: center;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .workspace-add:hover {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+
+        .sidebar.collapsed .workspace-switcher {
+            padding: 1rem;
+        }
+
+        .sidebar.collapsed .workspace-label,
+        .sidebar.collapsed .workspace-name {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .nav-menu {
+            padding: 2rem 0;
+        }
+
+        /* Settings Page Styles */
+        .settings-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .settings-form {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .settings-section {
+            margin-bottom: 2.5rem;
+            padding-bottom: 2.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .settings-section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-select {
+            cursor: pointer;
+        }
+
+        .form-help {
+            display: block;
+            font-size: 0.8125rem;
+            color: #64748b;
+            margin-top: 0.375rem;
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: #334155;
+        }
+
+        .form-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding-top: 1.5rem;
+        }
+
+        .danger-zone {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        .danger-zone .settings-section-title {
+            color: #dc2626;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 2rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border-right: 3px solid #3b82f6;
+        }
+
+        .nav-item i {
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+            min-width: 20px;
+        }
+
+        .nav-item span {
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sidebar-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            background: #f8fafc;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.sidebar-collapsed {
+            margin-left: 80px;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+        }
+
+        .btn-outline:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8125rem;
+        }
+
+        /* Content Area */
+        .content {
+            padding: 2rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .stat-icon {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon.blue { background: #dbeafe; color: #3b82f6; }
+        .stat-icon.green { background: #dcfce7; color: #10b981; }
+        .stat-icon.orange { background: #fed7aa; color: #f59e0b; }
+        .stat-icon.red { background: #fecaca; color: #ef4444; }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .stat-change {
+            font-size: 0.8125rem;
+            color: #64748b;
+        }
+
+        /* Upload Area */
+        .upload-section {
+            background: white;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 2rem;
+        }
+
+        .upload-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .upload-area {
+            margin: 1.5rem;
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.75rem;
+            padding: 3rem;
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .file-info {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1.5rem;
+            color: #0c4a6e;
+        }
+
+        .upload-actions {
+            padding: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Table Section */
+        .table-section {
+            background: white;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #f1f5f9;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .search-box input {
+            border: none;
+            background: none;
+            outline: none;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .filter-select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            background: white;
+            font-size: 0.875rem;
+        }
+
+        /* Notion-Style Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+        }
+
+        .data-table th {
+            background: #fafbfc;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.8125rem;
+            color: #37352f;
+            border-bottom: 1px solid #e9e9e7;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        .data-table th:first-child {
+            border-top-left-radius: 6px;
+        }
+
+        .data-table th:last-child {
+            border-top-right-radius: 6px;
+        }
+
+        .data-table td {
+            padding: 8px 16px;
+            border-bottom: 1px solid #f1f1ef;
+            vertical-align: middle;
+            position: relative;
+            transition: all 0.15s ease;
+        }
+
+        .data-table tr:hover td {
+            background: #f7f6f3;
+        }
+
+        .data-table tr:last-child td:first-child {
+            border-bottom-left-radius: 6px;
+        }
+
+        .data-table tr:last-child td:last-child {
+            border-bottom-right-radius: 6px;
+        }
+
+        /* Editable Cell Styles */
+        .editable-cell {
+            cursor: text;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+        }
+
+        .editable-cell:hover {
+            background: rgba(55, 53, 47, 0.06);
+            box-shadow: inset 0 0 0 1px rgba(55, 53, 47, 0.16);
+        }
+
+        .editable-cell:focus-within {
+            background: white;
+            box-shadow: inset 0 0 0 2px #005ccc;
+        }
+
+        .cell-input {
+            border: none;
+            background: transparent;
+            outline: none;
+            width: 100%;
+            font-size: 0.875rem;
+            color: #37352f;
+            padding: 4px 6px;
+        }
+
+        /* Column-specific styling */
+        .col-order-id {
+            width: 140px;
+            font-weight: 600;
+        }
+
+        .col-customer {
+            width: 200px;
+            min-width: 180px;
+        }
+
+        .col-address {
+            width: 250px;
+            min-width: 200px;
+        }
+
+        .col-phone {
+            width: 130px;
+        }
+
+        .col-products {
+            width: 200px;
+            min-width: 180px;
+        }
+
+        .col-amount {
+            width: 100px;
+            text-align: right;
+        }
+
+        .col-status {
+            width: 120px;
+        }
+
+        .col-voucher {
+            width: 120px;
+        }
+
+        .col-actions {
+            width: 140px;
+            text-align: center;
+        }
+
+        /* Notion-style status badges */
+        .notion-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        .badge-pending {
+            background: #fdf2e9;
+            color: #d97706;
+        }
+
+        .badge-processed {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .badge-ready {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .badge-sent {
+            background: #d1fae5;
+            color: #047857;
+            font-weight: 600;
+        }
+
+        /* Table container with Notion-style scrolling */
+        .table-container {
+            border-radius: 8px;
+            border: 1px solid #e9e9e7;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+
+        /* Custom scrollbar */
+        .table-scroll::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-scroll::-webkit-scrollbar-track {
+            background: #f1f1ef;
+        }
+
+        .table-scroll::-webkit-scrollbar-thumb {
+            background: #d3d1cb;
+            border-radius: 4px;
+        }
+
+        .table-scroll::-webkit-scrollbar-thumb:hover {
+            background: #b8b5ad;
+        }
+
+        /* Notion-style buttons in table */
+        .table-btn {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 4px;
+            border: 1px solid #e9e9e7;
+            background: white;
+            color: #37352f;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .table-btn:hover {
+            background: #f7f6f3;
+            border-color: #d3d1cb;
+        }
+
+        .table-btn.primary {
+            background: #2383e2;
+            color: white;
+            border-color: #2383e2;
+        }
+
+        .table-btn.primary:hover {
+            background: #1a6bb8;
+        }
+
+        .table-btn.success {
+            background: #0f7b0f;
+            color: white;
+            border-color: #0f7b0f;
+        }
+
+        .table-btn.success:hover {
+            background: #0d5f0d;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-processed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-failed {
+            background: #fecaca;
+            color: #991b1b;
+        }
+
+        /* Order Details */
+        .order-id {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+
+        .customer-name {
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .address-text {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .voucher-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .voucher-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+
+        .loading-spinner {
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .alert-info {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            color: #0c4a6e;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #64748b;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+            
+            .main-content {
+                margin-left: 240px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i data-feather="menu" id="sidebarIcon"></i>
+            </button>
+            <div class="sidebar-header">
+                <div class="logo">🚛 Geniki Express</div>
+                <div class="subtitle">Order Management System</div>
+            </div>
+            
+            <!-- Workspace Switcher -->
+            <div class="workspace-switcher">
+                <div class="workspace-label">Current Workspace</div>
+                <div class="workspace-current" onclick="toggleWorkspaceDropdown()">
+                    <span class="workspace-name" id="currentWorkspaceName">Loading...</span>
+                    <i data-feather="chevron-down" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div class="workspace-dropdown" id="workspaceDropdown">
+                    <!-- Workspaces will be dynamically loaded here -->
+                </div>
+                <div class="workspace-add" onclick="showAddWorkspaceModal()">
+                    <i data-feather="plus" style="width: 16px; height: 16px;"></i>
+                    <span>Add Workspace</span>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-tab="orders">
+                    <i data-feather="package"></i>
+                    <span>Orders Management</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="upload">
+                    <i data-feather="upload"></i>
+                    <span>Import Orders</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="vouchers">
+                    <i data-feather="file-text"></i>
+                    <span>Voucher History</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="reports">
+                    <i data-feather="bar-chart-2"></i>
+                    <span>Reports & Analytics</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="settings">
+                    <i data-feather="settings"></i>
+                    <span>System Settings</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <h1 class="page-title" id="pageTitle">Orders Management</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-outline btn-sm" onclick="refreshData()">
+                            <i data-feather="refresh-cw"></i>
+                            Refresh
+                        </button>
+                        <button id="bulkVoucherBtn" class="btn btn-success btn-sm disabled" onclick="bulkCreateVouchersSelected()" disabled>
+                            <i data-feather="package"></i>
+                            Create Vouchers (<span id="selectedCount">0</span>)
+                        </button>
+                        <button id="bulkExportBtn" class="btn btn-outline btn-sm disabled" onclick="exportSelectedOrders()" disabled>
+                            <i data-feather="download"></i>
+                            Export Selected (<span id="selectedCountExport">0</span>)
+                        </button>
+                        <button id="packingListBtn" class="btn btn-info btn-sm disabled" onclick="exportPackingList()" disabled>
+                            <i data-feather="package"></i>
+                            Packing List (<span id="selectedCountPacking">0</span>)
+                        </button>
+                        <button id="deleteSelectedBtn" class="btn btn-danger btn-sm disabled" onclick="deleteSelectedOrders()" disabled>
+                            <i data-feather="trash-2"></i>
+                            Delete Selected (<span id="selectedCountDelete">0</span>)
+                        </button>
+                        <button id="exportLabelsBtn" class="btn btn-info btn-sm disabled" onclick="exportSelectedLabels()" disabled>
+                            <i data-feather="printer"></i>
+                            Export Labels (<span id="selectedCountLabels">0</span>)
+                        </button>
+                        <button id="sendLabelsBtn" class="btn btn-success btn-sm" onclick="sendAllLabels()">
+                            <i data-feather="send"></i>
+                            Send Labels
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="switchTab('upload')">
+                            <i data-feather="upload"></i>
+                            Import New Orders
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="content">
+                <!-- Stats Dashboard -->
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Total Orders</div>
+                            <div class="stat-icon blue">
+                                <i data-feather="package"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalOrders">-</div>
+                        <div class="stat-change">All time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Pending Orders</div>
+                            <div class="stat-icon orange">
+                                <i data-feather="clock"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="pendingOrders">-</div>
+                        <div class="stat-change">Awaiting processing</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Processed Orders</div>
+                            <div class="stat-icon green">
+                                <i data-feather="check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="processedOrders">-</div>
+                        <div class="stat-change">With vouchers</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Total Revenue</div>
+                            <div class="stat-icon blue">
+                                <i data-feather="dollar-sign"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="totalRevenue">-</div>
+                        <div class="stat-change">Orders value</div>
+                    </div>
+                </div>
+
+                <!-- Orders Management Tab -->
+                <div id="ordersTab" class="tab-content">
+                    <div class="table-section">
+                        <div class="table-header">
+                            <h2 class="section-title">All Orders</h2>
+                            <div class="table-controls">
+                                <div class="search-box">
+                                    <i data-feather="search"></i>
+                                    <input type="text" placeholder="Search orders..." id="searchInput">
+                                </div>
+                                <select class="filter-select" id="statusFilter">
+                                    <option value="">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="processed">Processed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="ordersTableContainer">
+                            <div class="empty-state">
+                                <div class="empty-icon">📦</div>
+                                <h3>No orders imported yet</h3>
+                                <p>Upload a CSV file to get started</p>
+                                <button class="btn btn-primary" onclick="switchTab('upload')" style="margin-top: 1rem;">
+                                    <i data-feather="upload"></i>
+                                    Import Orders
+                                </button>
+                            </div>
+                    </div>
+                    
+                    <!-- Bottom Pagination Controls -->
+                    <div class="pagination-controls" id="paginationBottom" style="display: none; margin-top: 20px; justify-content: center;">
+                        <button id="prevPageBtn2" class="btn btn-outline btn-sm" onclick="changePage(-1)" disabled>
+                            <i data-feather="chevron-left"></i>
+                            Previous
+                        </button>
+                        <span class="pagination-info" id="paginationInfo2">
+                            Page 1 of 1 (0 orders)
+                        </span>
+                        <button id="nextPageBtn2" class="btn btn-outline btn-sm" onclick="changePage(1)" disabled>
+                            Next
+                            <i data-feather="chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Bottom Pagination Controls -->
+                    <div class="pagination-controls" id="paginationBottom" style="display: none; margin-top: 20px; justify-content: center;">
+                        <button id="prevPageBtn2" class="btn btn-outline btn-sm" onclick="changePage(-1)" disabled>
+                            <i data-feather="chevron-left"></i>
+                            Previous
+                        </button>
+                        <span class="pagination-info" id="paginationInfo2">
+                            Page 1 of 1 (0 orders)
+                        </span>
+                        <button id="nextPageBtn2" class="btn btn-outline btn-sm" onclick="changePage(1)" disabled>
+                            Next
+                            <i data-feather="chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Tab -->
+                <div id="uploadTab" class="tab-content hidden">
+                    <div class="upload-section">
+                        <div class="upload-header">
+                            <h2 class="section-title">Import Shopify Orders</h2>
+                        </div>
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">📁</div>
+                            <div class="upload-text">Drag & drop your CSV file here</div>
+                            <div class="upload-subtext">or click to browse</div>
+                            <input type="file" id="csvFile" accept=".csv" style="display: none;">
+                        </div>
+                        <div id="fileInfo" class="file-info hidden"></div>
+                        <div class="upload-actions">
+                            <button class="btn btn-primary" id="uploadBtn" onclick="uploadCSV()">
+                                <i data-feather="upload"></i>
+                                Upload & Import
+                            </button>
+                            <button class="btn btn-outline" onclick="clearFile()">
+                                <i data-feather="x"></i>
+                                Clear File
+                            </button>
+                        </div>
+                        <div id="uploadResults"></div>
+                    </div>
+                </div>
+
+                <!-- Other tabs placeholder -->
+                <div id="vouchersTab" class="tab-content hidden">
+                    <div class="empty-state">
+                        <div class="empty-icon">📄</div>
+                        <h3>Voucher History</h3>
+                        <p>Coming soon...</p>
+                    </div>
+                </div>
+
+                <div id="reportsTab" class="tab-content hidden">
+                    <div class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <h3>Reports & Analytics</h3>
+                        <p>Coming soon...</p>
+                    </div>
+                </div>
+
+                <div id="settingsTab" class="tab-content hidden">
+                    <div class="settings-container">
+                        <h2 class="section-title">Workspace Settings</h2>
+                        <p style="color: #64748b; margin-bottom: 2rem;">Manage your current workspace configuration and preferences</p>
+                        
+                        <div class="settings-form">
+                            <!-- Workspace Information -->
+                            <div class="settings-section">
+                                <h3 class="settings-section-title">
+                                    <i data-feather="briefcase" style="width: 20px; height: 20px;"></i>
+                                    Workspace Information
+                                </h3>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Workspace Name *</label>
+                                    <input type="text" id="settingsWorkspaceName" class="form-input" placeholder="e.g., Clo Skin Store">
+                                    <span class="form-help">This name will appear in the workspace switcher</span>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Store Name</label>
+                                    <input type="text" id="settingsStoreName" class="form-input" placeholder="e.g., Clo Skin">
+                                    <span class="form-help">Display name for your store</span>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Store URL</label>
+                                    <input type="text" id="settingsStoreUrl" class="form-input" placeholder="e.g., g29vxb-iz.myshopify.com">
+                                    <span class="form-help">Your Shopify store URL</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Location Settings -->
+                            <div class="settings-section">
+                                <h3 class="settings-section-title">
+                                    <i data-feather="map-pin" style="width: 20px; height: 20px;"></i>
+                                    Location & Regional Settings
+                                </h3>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Country *</label>
+                                    <select id="settingsCountry" class="form-select">
+                                        <option value="">Select a country...</option>
+                                        <option value="GR">🇬🇷 Greece</option>
+                                        <option value="US">🇺🇸 United States</option>
+                                        <option value="GB">🇬🇧 United Kingdom</option>
+                                        <option value="DE">🇩🇪 Germany</option>
+                                        <option value="FR">🇫🇷 France</option>
+                                        <option value="IT">🇮🇹 Italy</option>
+                                        <option value="ES">🇪🇸 Spain</option>
+                                        <option value="NL">🇳🇱 Netherlands</option>
+                                        <option value="BE">🇧🇪 Belgium</option>
+                                        <option value="CH">🇨🇭 Switzerland</option>
+                                        <option value="AT">🇦🇹 Austria</option>
+                                        <option value="PL">🇵🇱 Poland</option>
+                                        <option value="CZ">🇨🇿 Czech Republic</option>
+                                        <option value="RO">🇷🇴 Romania</option>
+                                        <option value="BG">🇧🇬 Bulgaria</option>
+                                        <option value="HR">🇭🇷 Croatia</option>
+                                        <option value="CY">🇨🇾 Cyprus</option>
+                                        <option value="DK">🇩🇰 Denmark</option>
+                                        <option value="FI">🇫🇮 Finland</option>
+                                        <option value="IE">🇮🇪 Ireland</option>
+                                        <option value="LU">🇱🇺 Luxembourg</option>
+                                        <option value="MT">🇲🇹 Malta</option>
+                                        <option value="PT">🇵🇹 Portugal</option>
+                                        <option value="SE">🇸🇪 Sweden</option>
+                                        <option value="NO">🇳🇴 Norway</option>
+                                        <option value="CA">🇨🇦 Canada</option>
+                                        <option value="AU">🇦🇺 Australia</option>
+                                    </select>
+                                    <span class="form-help">Select your primary shipping country. This will show a flag in the workspace switcher.</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Integration Settings -->
+                            <div class="settings-section">
+                                <h3 class="settings-section-title">
+                                    <i data-feather="link" style="width: 20px; height: 20px;"></i>
+                                    Shopify Integration (Optional)
+                                </h3>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Shopify Shop Domain</label>
+                                    <input type="text" id="settingsShopifyShop" class="form-input" placeholder="e.g., your-store.myshopify.com">
+                                    <span class="form-help">Your Shopify admin domain</span>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Shopify Access Token</label>
+                                    <input type="password" id="settingsShopifyToken" class="form-input" placeholder="shpat_xxxxxxxxxxxxx">
+                                    <span class="form-help">API access token for this specific store (leave empty to use global credentials)</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Workspace Status -->
+                            <div class="settings-section">
+                                <h3 class="settings-section-title">
+                                    <i data-feather="toggle-left" style="width: 20px; height: 20px;"></i>
+                                    Workspace Status
+                                </h3>
+                                
+                                <div class="form-group">
+                                    <label class="form-checkbox">
+                                        <input type="checkbox" id="settingsIsActive" checked>
+                                        <span>Active Workspace</span>
+                                    </label>
+                                    <span class="form-help">Inactive workspaces won't appear in the workspace switcher</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="settings-actions">
+                                <button class="btn btn-outline" onclick="cancelWorkspaceSettings()">
+                                    <i data-feather="x"></i>
+                                    Cancel
+                                </button>
+                                <button class="btn btn-primary" onclick="saveWorkspaceSettings()">
+                                    <i data-feather="save"></i>
+                                    Save Changes
+                                </button>
+                            </div>
+                            
+                            <!-- Danger Zone -->
+                            <div class="settings-section danger-zone">
+                                <h3 class="settings-section-title">
+                                    <i data-feather="alert-triangle" style="width: 20px; height: 20px;"></i>
+                                    Danger Zone
+                                </h3>
+                                <p style="color: #64748b; margin-bottom: 1rem;">Deleting a workspace will permanently remove all associated orders, vouchers, and data.</p>
+                                <button class="btn btn-danger" onclick="deleteCurrentWorkspace()">
+                                    <i data-feather="trash-2"></i>
+                                    Delete This Workspace
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Feather Icons
+        feather.replace();
+
+        let selectedFile = null;
+        let currentOrders = [];
+        let selectedOrders = new Set(); // For checkbox selections
+        let currentPage = 1;
+        let totalPages = 1;
+        let totalOrders = 0;
+        
+        // Workspace management
+        let currentWorkspaceId = parseInt(localStorage.getItem('currentWorkspaceId')) || 1;
+        let allWorkspaces = [];
+
+        // Tab Navigation
+        function switchTab(tabName) {
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+
+            // Update page title
+            const titles = {
+                orders: 'Orders Management',
+                upload: 'Import Orders',
+                vouchers: 'Voucher History',
+                reports: 'Reports & Analytics',
+                settings: 'System Settings'
+            };
+            document.getElementById('pageTitle').textContent = titles[tabName];
+
+            // Load data if needed
+            if (tabName === 'orders') {
+                loadOrders();
+            }
+            
+            // Load settings when switching to settings tab
+            if (tabName === 'settings') {
+                loadWorkspaceSettings();
+            }
+            
+            // Refresh feather icons
+            feather.replace();
+        }
+
+        // Event listeners for navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = item.dataset.tab;
+                switchTab(tab);
+            });
+        });
+
+        // ==================== WORKSPACE MANAGEMENT ====================
+        
+        async function loadWorkspaces() {
+            try {
+                const response = await fetch('/api/workspaces');
+                const data = await response.json();
+                
+                if (data.success) {
+                    allWorkspaces = data.workspaces;
+                    
+                    // Verify currentWorkspaceId exists in loaded workspaces
+                    const workspaceExists = allWorkspaces.some(w => w.workspace_id === currentWorkspaceId);
+                    if (!workspaceExists && allWorkspaces.length > 0) {
+                        // If saved workspace doesn't exist, default to first workspace
+                        currentWorkspaceId = allWorkspaces[0].workspace_id;
+                        localStorage.setItem('currentWorkspaceId', currentWorkspaceId);
+                        console.log(`⚠️ Saved workspace not found, defaulting to workspace ${currentWorkspaceId}`);
+                    }
+                    
+                    updateWorkspaceUI();
+                    console.log(`✅ Loaded ${allWorkspaces.length} workspaces, current workspace: ${currentWorkspaceId}`);
+                }
+            } catch (error) {
+                console.error('Error loading workspaces:', error);
+                showAlert('Failed to load workspaces', 'error');
+            }
+        }
+        
+        function updateWorkspaceUI() {
+            const currentWorkspace = allWorkspaces.find(w => w.workspace_id === currentWorkspaceId);
+            
+            if (currentWorkspace) {
+                const flag = getCountryFlag(currentWorkspace.country);
+                document.getElementById('currentWorkspaceName').textContent = `${flag} ${currentWorkspace.workspace_name}`;
+            }
+            
+            // Update workspace dropdown
+            const dropdown = document.getElementById('workspaceDropdown');
+            dropdown.innerHTML = allWorkspaces.filter(w => w.is_active !== false).map(workspace => {
+                const flag = getCountryFlag(workspace.country);
+                return `
+                <div class="workspace-option ${workspace.workspace_id === currentWorkspaceId ? 'selected' : ''}" 
+                     onclick="switchWorkspace(${workspace.workspace_id})">
+                    <span>${flag} ${workspace.workspace_name}</span>
+                    ${workspace.workspace_id === currentWorkspaceId ? '<i data-feather="check" style="width: 16px; height: 16px;"></i>' : ''}
+                </div>
+            `}).join('');
+            
+            feather.replace();
+        }
+        
+        function toggleWorkspaceDropdown() {
+            const dropdown = document.getElementById('workspaceDropdown');
+            dropdown.classList.toggle('active');
+        }
+        
+        async function switchWorkspace(workspaceId) {
+            if (workspaceId === currentWorkspaceId) {
+                toggleWorkspaceDropdown();
+                return;
+            }
+            
+            currentWorkspaceId = workspaceId;
+            localStorage.setItem('currentWorkspaceId', workspaceId);
+            
+            updateWorkspaceUI();
+            toggleWorkspaceDropdown();
+            
+            // Reload orders for new workspace
+            currentPage = 1;
+            await loadOrders();
+            
+            const workspace = allWorkspaces.find(w => w.workspace_id === workspaceId);
+            showAlert(`✅ Switched to workspace: ${workspace.workspace_name}`, 'success');
+            
+            console.log(`🔄 Switched to workspace: ${workspaceId}`);
+        }
+        
+        async function showAddWorkspaceModal() {
+            const workspaceName = prompt('Enter new workspace name:');
+            
+            if (!workspaceName || workspaceName.trim() === '') {
+                return;
+            }
+            
+            const storeName = prompt('Enter store name (optional):');
+            const storeUrl = prompt('Enter store URL (optional):');
+            
+            try {
+                const response = await fetch('/api/workspaces', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        workspace_name: workspaceName.trim(),
+                        store_name: storeName?.trim() || workspaceName.trim(),
+                        store_url: storeUrl?.trim() || ''
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(`✅ Workspace "${data.workspace.workspace_name}" created successfully!`, 'success');
+                    await loadWorkspaces();
+                } else {
+                    showAlert(`❌ Failed to create workspace: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating workspace:', error);
+                showAlert('❌ Network error creating workspace', 'error');
+            }
+        }
+        
+        // Helper to add workspace ID to all API calls
+        function getWorkspaceHeaders() {
+            return {
+                'x-workspace-id': currentWorkspaceId.toString()
+            };
+        }
+        
+        function getWorkspaceQueryParam() {
+            return `workspaceId=${currentWorkspaceId}`;
+        }
+        
+        // Country flag helper
+        function getCountryFlag(countryCode) {
+            const flags = {
+                'GR': '🇬🇷', 'US': '🇺🇸', 'GB': '🇬🇧', 'DE': '🇩🇪', 'FR': '🇫🇷',
+                'IT': '🇮🇹', 'ES': '🇪🇸', 'NL': '🇳🇱', 'BE': '🇧🇪', 'CH': '🇨🇭',
+                'AT': '🇦🇹', 'PL': '🇵🇱', 'CZ': '🇨🇿', 'RO': '🇷🇴', 'BG': '🇧🇬',
+                'HR': '🇭🇷', 'CY': '🇨🇾', 'DK': '🇩🇰', 'FI': '🇫🇮', 'IE': '🇮🇪',
+                'LU': '🇱🇺', 'MT': '🇲🇹', 'PT': '🇵🇹', 'SE': '🇸🇪', 'NO': '🇳🇴',
+                'CA': '🇨🇦', 'AU': '🇦🇺'
+            };
+            return flags[countryCode] || '🌍';
+        }
+        
+        // ==================== SETTINGS PAGE ====================
+        
+        async function loadWorkspaceSettings() {
+            try {
+                const workspace = allWorkspaces.find(w => w.workspace_id === currentWorkspaceId);
+                
+                if (!workspace) {
+                    showAlert('❌ Workspace not found', 'error');
+                    return;
+                }
+                
+                // Populate form fields
+                document.getElementById('settingsWorkspaceName').value = workspace.workspace_name || '';
+                document.getElementById('settingsStoreName').value = workspace.store_name || '';
+                document.getElementById('settingsStoreUrl').value = workspace.store_url || '';
+                document.getElementById('settingsCountry').value = workspace.country || 'GR';
+                document.getElementById('settingsShopifyShop').value = workspace.shopify_shop || '';
+                document.getElementById('settingsShopifyToken').value = workspace.shopify_access_token || '';
+                document.getElementById('settingsIsActive').checked = workspace.is_active !== false;
+                
+                console.log('✅ Loaded settings for workspace:', workspace.workspace_name);
+            } catch (error) {
+                console.error('Error loading workspace settings:', error);
+                showAlert('❌ Failed to load settings', 'error');
+            }
+        }
+        
+        async function saveWorkspaceSettings() {
+            const workspaceName = document.getElementById('settingsWorkspaceName').value.trim();
+            const country = document.getElementById('settingsCountry').value;
+            
+            if (!workspaceName) {
+                showAlert('❌ Workspace name is required', 'error');
+                return;
+            }
+            
+            if (!country) {
+                showAlert('❌ Please select a country', 'error');
+                return;
+            }
+            
+            try {
+                const updateData = {
+                    workspace_name: workspaceName,
+                    store_name: document.getElementById('settingsStoreName').value.trim(),
+                    store_url: document.getElementById('settingsStoreUrl').value.trim(),
+                    country: country,
+                    shopify_shop: document.getElementById('settingsShopifyShop').value.trim(),
+                    shopify_access_token: document.getElementById('settingsShopifyToken').value.trim(),
+                    is_active: document.getElementById('settingsIsActive').checked
+                };
+                
+                const response = await fetch(`/api/workspaces/${currentWorkspaceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`✅ Workspace settings saved successfully!`, 'success');
+                    await loadWorkspaces(); // Reload workspaces to update UI
+                    switchTab('orders'); // Go back to orders
+                } else {
+                    showAlert(`❌ Failed to save: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving workspace settings:', error);
+                showAlert('❌ Network error saving settings', 'error');
+            }
+        }
+        
+        function cancelWorkspaceSettings() {
+            if (confirm('Discard unsaved changes?')) {
+                loadWorkspaceSettings(); // Reload original values
+                switchTab('orders');
+            }
+        }
+        
+        async function deleteCurrentWorkspace() {
+            const workspace = allWorkspaces.find(w => w.workspace_id === currentWorkspaceId);
+            
+            if (!workspace) {
+                showAlert('❌ Workspace not found', 'error');
+                return;
+            }
+            
+            const confirmDelete = confirm(
+                `⚠️ DELETE WORKSPACE?\n\n` +
+                `Workspace: ${workspace.workspace_name}\n\n` +
+                `This will PERMANENTLY DELETE:\n` +
+                `• All orders\n` +
+                `• All vouchers\n` +
+                `• All CSV imports\n` +
+                `• All workspace data\n\n` +
+                `THIS CANNOT BE UNDONE!\n\n` +
+                `Type the workspace name to confirm deletion.`
+            );
+            
+            if (!confirmDelete) {
+                return;
+            }
+            
+            const confirmName = prompt(`Type "${workspace.workspace_name}" to confirm deletion:`);
+            
+            if (confirmName !== workspace.workspace_name) {
+                showAlert('❌ Workspace name does not match. Deletion cancelled.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/workspaces/${currentWorkspaceId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`✅ Workspace "${workspace.workspace_name}" deleted successfully`, 'success');
+                    
+                    // Switch to first available workspace
+                    await loadWorkspaces();
+                    if (allWorkspaces.length > 0) {
+                        await switchWorkspace(allWorkspaces[0].workspace_id);
+                    } else {
+                        showAlert('⚠️ No workspaces left. Please create a new one.', 'warning');
+                    }
+                } else {
+                    showAlert(`❌ Failed to delete: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting workspace:', error);
+                showAlert('❌ Network error deleting workspace', 'error');
+            }
+        }
+
+        // File upload functionality
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Load workspaces first and wait for them
+            await loadWorkspaces();
+            
+            // Initialize selection system
+            selectedOrders = new Set();
+            console.log('Selection system initialized');
+            
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('csvFile');
+
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFileSelect(e.target.files[0]);
+            });
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect(files[0]);
+                }
+            });
+
+            // Search and filter
+            document.getElementById('searchInput').addEventListener('input', filterOrders);
+            document.getElementById('statusFilter').addEventListener('change', filterOrders);
+
+            // Load initial data
+            loadOrders();
+        });
+
+        function handleFileSelect(file) {
+            if (!file) return;
+
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showAlert('Please select a CSV file', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            
+            const fileInfo = document.getElementById('fileInfo');
+            fileInfo.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <i data-feather="file"></i>
+                    <div>
+                        <div style="font-weight: 600;">${file.name}</div>
+                        <div style="font-size: 0.875rem; opacity: 0.8;">
+                            ${(file.size / 1024).toFixed(1)} KB • Ready to upload
+                        </div>
+                    </div>
+                </div>
+            `;
+            fileInfo.classList.remove('hidden');
+            feather.replace();
+
+            showAlert('File selected successfully. Click "Upload & Import" to process.', 'success');
+        }
+
+        async function uploadCSV() {
+            if (!selectedFile) {
+                showAlert('Please select a CSV file first', 'error');
+                return;
+            }
+
+            showLoading('uploadResults', 'Uploading and importing orders...');
+
+            const formData = new FormData();
+            formData.append('csvFile', selectedFile);
+            formData.append('workspaceId', currentWorkspaceId);
+
+            try {
+                const response = await fetch('/api/upload-csv', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(
+                        `✅ Successfully imported ${result.imported} orders from ${selectedFile.name}!
+                        ${result.failed > 0 ? `<br>⚠️ ${result.failed} rows failed to import` : ''}`, 
+                        'success'
+                    );
+                    
+                    // Switch to orders tab and refresh
+                    setTimeout(() => {
+                        switchTab('orders');
+                        loadOrders();
+                    }, 1000);
+                } else {
+                    showAlert(`Import failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadOrders(page = 1) {
+            showLoading('ordersTableContainer', 'Loading orders...');
+
+            try {
+                const response = await fetch(`/api/imported-orders?page=${page}&limit=100&${getWorkspaceQueryParam()}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentOrders = result.orders;
+                    
+                    // Update pagination info
+                    currentPage = result.pagination.currentPage;
+                    totalPages = result.pagination.totalPages;
+                    totalOrders = result.pagination.totalOrders;
+                    
+                    displayOrders(currentOrders);
+                    updatePaginationControls();
+                    updateStats(currentOrders);
+                } else {
+                    showError('ordersTableContainer', result.error);
+                }
+            } catch (error) {
+                showError('ordersTableContainer', error.message);
+            }
+        }
+
+        function displayOrders(orders) {
+            const container = document.getElementById('ordersTableContainer');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <h3>No orders imported yet</h3>
+                        <p>Upload a CSV file to get started</p>
+                        <button class="btn btn-primary" onclick="switchTab('upload')" style="margin-top: 1rem;">
+                            <i data-feather="upload"></i>
+                            Import Orders
+                        </button>
+                    </div>
+                `;
+                feather.replace();
+                return;
+            }
+
+            const html = `
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-select" style="width: 50px;">
+                                        <div class="editable-cell" style="justify-content: center;">
+                                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" style="transform: scale(1.2);">
+                                        </div>
+                                    </th>
+                                    <th class="col-order-id">Order ID</th>
+                                    <th class="col-customer">Customer</th>
+                                    <th class="col-address">Shipping Address</th>
+                                    <th class="col-phone">Phone</th>
+                                    <th class="col-products">Products</th>
+                                    <th class="col-amount">Amount</th>
+                                    <th class="col-status">Status</th>
+                                    <th class="col-voucher">Voucher</th>
+                                    <th class="col-actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${orders.map((order, index) => `
+                                    <tr data-order-id="${order.orderId}">
+                                        <td class="col-select" onclick="event.stopPropagation();">
+                                            <div class="editable-cell" style="justify-content: center;">
+                                                <input type="checkbox" class="order-checkbox" value="${order.orderId}" onchange="updateSelectAllState(); updateBulkButtonsState();" style="transform: scale(1.2);">
+                                            </div>
+                                        </td>
+                                        <td class="col-order-id" onclick="selectOrder('${order.orderId}')" style="cursor: pointer;">
+                                            <div class="editable-cell">
+                                                <div style="font-weight: 600; color: #2383e2;">${order.orderName || order.orderId}</div>
+                                            </div>
+                                            <div style="font-size: 0.6875rem; color: #a0a0a0; margin-top: 2px;">
+                                                ${new Date(order.importedAt).toLocaleDateString('en-GB')}
+                                            </div>
+                                        </td>
+                                        <td class="col-customer">
+                                            <div class="editable-cell">
+                                                <div>
+                                                    <div style="font-weight: 500; color: #37352f;">${order.firstName} ${order.lastName}</div>
+                                                    <div style="font-size: 0.75rem; color: #787774; margin-top: 1px;">${order.email}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="col-address">
+                                            <div class="editable-cell">
+                                                <div style="line-height: 1.4;">
+                                                    <div style="color: #37352f;">${order.address1}</div>
+                                                    <div style="font-size: 0.75rem; color: #787774;">${order.city} ${order.zip}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="col-phone">
+                                            <div class="editable-cell">
+                                                <span style="font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; font-size: 0.8125rem; color: #37352f;">
+                                                    ${order.phone || '-'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="col-products">
+                                            <div class="editable-cell">
+                                                <div style="line-height: 1.3;">
+                                                    ${order.products ? order.products.map(product => 
+                                                        `<div style="font-size: 0.8125rem; color: #37352f; margin-bottom: 2px;">
+                                                            <span style="font-weight: 500;">${product.quantity}x</span> ${product.name}
+                                                        </div>`
+                                                    ).join('') : 
+                                                    `<span style="color: #a0a0a0; font-size: 0.8125rem;">${order.lineItems || '-'}</span>`}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="col-amount">
+                                            <div class="editable-cell" style="justify-content: flex-end;">
+                                                <div style="display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
+                                                    <span style="font-size: 1rem;">
+                                                        ${order.paymentStatus === 'paid' ? '💳' : '💰'}
+                                                    </span>
+                                                    <span style="font-weight: 600; font-variant-numeric: tabular-nums; color: #37352f;">
+                                                        €${parseFloat(order.totalPrice || 0).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                ${order.paymentStatus === 'paid' ? 
+                                                    '<div style="font-size: 0.6875rem; color: #10b981; font-weight: 500; text-align: right; margin-top: 1px;">Paid</div>' : 
+                                                    '<div style="font-size: 0.6875rem; color: #f59e0b; font-weight: 500; text-align: right; margin-top: 1px;">COD</div>'
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="col-status">
+                                            <span class="notion-badge ${getStatusClass(order)}">
+                                                ${getStatusText(order)}
+                                            </span>
+                                        </td>
+                                        <td class="col-voucher">
+                                            ${order.voucherNumber ? 
+                                                `<a href="#" style="color: #2383e2; text-decoration: none; font-weight: 500; font-size: 0.8125rem;" onclick="downloadVoucher('${order.voucherNumber}')">${order.voucherNumber}</a>` : 
+                                                '<span style="color: #a0a0a0;">-</span>'
+                                            }
+                                        </td>
+                                        <td class="col-actions">
+                                            ${!order.processed ? 
+                                                `<button class="table-btn success" onclick="createSingleVoucher('${order.orderId || order.orderName}')">
+                                                    Create Voucher
+                                                </button>` :
+                                                order.voucherNumber ?
+                                                    `<button class="table-btn primary" onclick="downloadVoucher('${order.voucherNumber}')">
+                                                        Download PDF
+                                                    </button>` :
+                                                    '<span style="color: #0f7b0f; font-weight: 500; font-size: 0.75rem;">✓ Completed</span>'
+                                            }
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            feather.replace();
+        }
+
+        // Sidebar toggle functionality
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const sidebarIcon = document.getElementById('sidebarIcon');
+            
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('sidebar-collapsed');
+            
+            // Update icon
+            if (sidebar.classList.contains('collapsed')) {
+                sidebarIcon.setAttribute('data-feather', 'chevron-right');
+            } else {
+                sidebarIcon.setAttribute('data-feather', 'menu');
+            }
+            feather.replace();
+        }
+
+        function updateStats(orders) {
+            const total = orders.length;
+            const pending = orders.filter(o => !o.processed).length;
+            const processed = orders.filter(o => o.processed).length;
+            const revenue = orders.reduce((sum, order) => sum + parseFloat(order.totalPrice || 0), 0);
+
+            document.getElementById('totalOrders').textContent = total;
+            document.getElementById('pendingOrders').textContent = pending;
+            document.getElementById('processedOrders').textContent = processed;
+            document.getElementById('totalRevenue').textContent = `€${revenue.toFixed(2)}`;
+        }
+
+        function filterOrders() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const filtered = currentOrders.filter(order => {
+                const matchesSearch = !searchTerm || 
+                    (order.orderName && order.orderName.toLowerCase().includes(searchTerm)) ||
+                    (order.firstName && order.firstName.toLowerCase().includes(searchTerm)) ||
+                    (order.lastName && order.lastName.toLowerCase().includes(searchTerm)) ||
+                    (order.email && order.email.toLowerCase().includes(searchTerm));
+
+                const matchesStatus = !statusFilter || 
+                    (statusFilter === 'pending' && !order.processed) ||
+                    (statusFilter === 'processed' && order.processed);
+
+                return matchesSearch && matchesStatus;
+            });
+
+            displayOrders(filtered);
+        }
+
+        // Selection management functions
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const orderCheckboxes = document.querySelectorAll('.order-checkbox');
+            
+            orderCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+                if (selectAllCheckbox.checked) {
+                    selectedOrders.add(checkbox.value);
+                } else {
+                    selectedOrders.delete(checkbox.value);
+                }
+            });
+            
+            updateBulkButtonsState();
+        }
+
+        function updateSelectAllState() {
+            ensureSelectionInit(); // Make sure selectedOrders exists
+            
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const orderCheckboxes = document.querySelectorAll('.order-checkbox');
+            const checkedBoxes = document.querySelectorAll('.order-checkbox:checked');
+            
+            // Update selected orders set
+            selectedOrders.clear();
+            checkedBoxes.forEach(checkbox => {
+                selectedOrders.add(checkbox.value);
+            });
+            
+            // Update select all state
+            if (checkedBoxes.length === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedBoxes.length === orderCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+                selectAllCheckbox.checked = false;
+            }
+        }
+
+        function updateBulkButtonsState() {
+            ensureSelectionInit(); // Make sure selectedOrders exists
+            
+            const selectedCount = selectedOrders.size;
+            const bulkVoucherBtn = document.getElementById('bulkVoucherBtn');
+            const bulkExportBtn = document.getElementById('bulkExportBtn');
+            const packingListBtn = document.getElementById('packingListBtn');
+            const deleteSelectedBtn = document.getElementById('deleteSelectedBtn'); // Get delete button
+            
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const selectedCountExportSpan = document.getElementById('selectedCountExport');
+            const selectedCountPackingSpan = document.getElementById('selectedCountPacking');
+            const selectedCountDeleteSpan = document.getElementById('selectedCountDelete'); // Get delete counter
+            const selectedCountLabelsSpan = document.getElementById('selectedCountLabels'); // Get export labels counter
+            
+            // Update selection-based counters (excluding send labels)
+            if (selectedCountSpan) selectedCountSpan.textContent = selectedCount;
+            if (selectedCountExportSpan) selectedCountExportSpan.textContent = selectedCount;
+            if (selectedCountPackingSpan) selectedCountPackingSpan.textContent = selectedCount;
+            if (selectedCountDeleteSpan) selectedCountDeleteSpan.textContent = selectedCount; // Update delete counter
+            if (selectedCountLabelsSpan) selectedCountLabelsSpan.textContent = selectedCount; // Update export labels counter
+            
+            // Enable/disable selection-based buttons (excluding sendLabelsBtn)
+            const exportLabelsBtn = document.getElementById('exportLabelsBtn');
+            const buttons = [bulkVoucherBtn, bulkExportBtn, packingListBtn, deleteSelectedBtn, exportLabelsBtn];
+            buttons.forEach(btn => {
+                if (btn) {
+                    btn.disabled = selectedCount === 0;
+                    if (selectedCount > 0) {
+                        btn.classList.remove('disabled');
+                    } else {
+                        btn.classList.add('disabled');
+                    }
+                }
+            });
+            
+            console.log(`Updated button states: ${selectedCount} orders selected`);
+        }
+
+        // Bulk operations for selected orders
+        async function bulkCreateVouchersSelected() {
+            if (selectedOrders.size === 0) {
+                showAlert('Please select orders first', 'error');
+                return;
+            }
+
+            const orderIds = Array.from(selectedOrders);
+            showLoading('uploadResults', `Creating vouchers for ${orderIds.length} selected orders...`);
+
+            try {
+                const promises = orderIds.map(orderId => 
+                    fetch(`/api/imported-orders/${encodeURIComponent(orderId)}/voucher`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ workspaceId: currentWorkspaceId })
+                    }).then(response => response.json())
+                );
+
+                const results = await Promise.all(promises);
+                
+                let successful = 0;
+                let failed = 0;
+                
+                results.forEach((result, index) => {
+                    if (result.success) {
+                        successful++;
+                    } else {
+                        failed++;
+                        console.error(`Failed to create voucher for ${orderIds[index]}:`, result.error);
+                    }
+                });
+
+                if (successful > 0) {
+                    showAlert(`✅ Successfully created ${successful} vouchers${failed > 0 ? ` (${failed} failed)` : ''}`, 'success');
+                    loadOrders(); // Refresh to show updated status
+                    clearSelection();
+                } else {
+                    showAlert(`❌ Failed to create vouchers for all selected orders`, 'error');
+                }
+                
+                // Clear loading message
+                const resultsDiv = document.getElementById('uploadResults');
+                if (resultsDiv) resultsDiv.innerHTML = '';
+            } catch (error) {
+                // Clear loading message
+                const resultsDiv = document.getElementById('uploadResults');
+                if (resultsDiv) resultsDiv.innerHTML = '';
+                showAlert('Error creating bulk vouchers: ' + error.message, 'error');
+            }
+        }
+
+        async function exportSelectedOrders() {
+            if (selectedOrders.size === 0) {
+                showAlert('Please select orders first', 'error');
+                return;
+            }
+
+            const selectedOrderData = currentOrders.filter(order => selectedOrders.has(order.orderId));
+            
+            // Create comprehensive CSV content
+            const csvHeaders = [
+                'Order ID', 'Order Date', 'Customer Name', 'Email', 'Phone', 
+                'Shipping Address', 'City', 'ZIP Code', 'Country',
+                'Products (with Quantities)', 'Order Amount', 'Payment Method', 'Payment Status', 'Outstanding Balance',
+                'Voucher/Label Number', 'Voucher Status', 'Import Date', 'Notes'
+            ];
+            
+            const csvRows = selectedOrderData.map(order => {
+                // Format products with quantities (same as displayed in table)
+                let productsText = '';
+                if (order.products && Array.isArray(order.products)) {
+                    productsText = order.products.map(p => `${p.quantity}x ${p.name}`).join('; ');
+                } else if (order.lineItems) {
+                    productsText = order.lineItems;
+                } else {
+                    productsText = 'No products listed';
+                }
+                
+                // Format full shipping address
+                const fullAddress = [
+                    order.address1,
+                    order.address2 
+                ].filter(Boolean).join(', ');
+                
+                return [
+                    order.orderId || order.orderName || '',
+                    order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB') : new Date(order.importedAt).toLocaleDateString('en-GB'),
+                    `${order.firstName || ''} ${order.lastName || ''}`.trim(),
+                    order.email || '',
+                    order.phone || '',
+                    fullAddress || order.shippingAddress || '',
+                    order.city || '',
+                    order.zip || '',
+                    order.country || 'GR',
+                    productsText,
+                    `€${parseFloat(order.totalPrice || 0).toFixed(2)}`,
+                    order.paymentMethod || (order.paymentStatus === 'paid' ? 'Shopify Payments' : 'Cash on Delivery'),
+                    order.paymentStatus === 'paid' ? 'Paid' : 'COD',
+                    order.outstandingBalance ? `€${parseFloat(order.outstandingBalance).toFixed(2)}` : '€0.00',
+                    order.voucherNumber || 'Not Generated',
+                    order.voucherNumber ? 'Generated' : 'Pending',
+                    new Date(order.importedAt).toLocaleDateString('en-GB'),
+                    order.notes || ''
+                ];
+            });
+            
+            const csvContent = [csvHeaders, ...csvRows]
+                .map(row => row.map(cell => `"${cell}"`).join(','))
+                .join('\n');
+            
+            // Download CSV file with comprehensive filename
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().split('T')[0];
+            link.download = `geniki_orders_export_${selectedOrders.size}_orders_${timestamp}.csv`;
+            link.click();
+            
+            // Show success message with details
+            showAlert(`✅ Successfully exported ${selectedOrders.size} orders to CSV with comprehensive details`, 'success');
+        }
+
+        // Pagination functions
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                // Clear selection when changing pages
+                clearSelection();
+                loadOrders(newPage);
+            }
+        }
+
+        function updatePaginationControls() {
+            const prevBtns = [document.getElementById('prevPageBtn'), document.getElementById('prevPageBtn2')];
+            const nextBtns = [document.getElementById('nextPageBtn'), document.getElementById('nextPageBtn2')];
+            const paginationInfos = [document.getElementById('paginationInfo'), document.getElementById('paginationInfo2')];
+            const paginationControls = [document.getElementById('paginationTop'), document.getElementById('paginationBottom')];
+            
+            // Show/hide pagination controls
+            const showPagination = totalPages > 1;
+            paginationControls.forEach(control => {
+                if (control) control.style.display = showPagination ? 'flex' : 'none';
+            });
+            
+            if (showPagination) {
+                // Update info text
+                const infoText = `Page ${currentPage} of ${totalPages} (${totalOrders} orders)`;
+                paginationInfos.forEach(info => {
+                    if (info) info.textContent = infoText;
+                });
+                
+                // Update button states
+                prevBtns.forEach(btn => {
+                    if (btn) btn.disabled = currentPage <= 1;
+                });
+                
+                nextBtns.forEach(btn => {
+                    if (btn) btn.disabled = currentPage >= totalPages;
+                });
+            }
+        }
+
+        // Status helper functions
+        function getStatusClass(order) {
+            if (order.voucherNumber && order.voucherStatus === 'sent') {
+                return 'badge-sent';
+            } else if (order.voucherNumber) {
+                return 'badge-ready';
+            } else if (order.processed) {
+                return 'badge-processed';
+            } else {
+                return 'badge-pending';
+            }
+        }
+
+        function getStatusText(order) {
+            if (order.voucherNumber && order.voucherStatus === 'sent') {
+                return '📤 Sent';
+            } else if (order.voucherNumber) {
+                return '🏷️ Ready';
+            } else if (order.processed) {
+                return '✓ Processed';
+            } else {
+                return '⏳ Pending';
+            }
+        }
+
+        // Export Selected Labels Function (combine all selected vouchers in one PDF)
+        async function exportSelectedLabels() {
+            ensureSelectionInit();
+            
+            if (selectedOrders.size === 0) {
+                showAlert('Please select orders to export labels', 'error');
+                return;
+            }
+
+            // Get selected orders that have vouchers
+            const selectedOrdersWithVouchers = Array.from(selectedOrders).filter(orderId => {
+                const orderRow = currentOrders.find(order => order.orderId === orderId);
+                return orderRow && orderRow.voucherNumber;
+            });
+
+            if (selectedOrdersWithVouchers.length === 0) {
+                showAlert('❌ No vouchers found for selected orders. Create vouchers first!', 'error');
+                return;
+            }
+
+            const voucherCount = selectedOrdersWithVouchers.length;
+            const ordersList = selectedOrdersWithVouchers.join(', ');
+            
+            // Show confirmation dialog
+            const confirmed = confirm(
+                `🖨️ EXPORT ${voucherCount} LABELS IN ONE PDF?\n\n` +
+                `📄 Selected orders with vouchers:\n${ordersList}\n\n` +
+                `✅ All vouchers will be combined in A6 format\n` +
+                `✅ Perfect for batch printing\n\n` +
+                `Ready to export?`
+            );
+            
+            if (!confirmed) {
+                return;
+            }
+
+            showLoading('uploadResults', `Exporting ${voucherCount} labels in one PDF...`);
+
+            try {
+                const response = await fetch('/api/export-labels', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderIds: selectedOrdersWithVouchers,
+                        workspaceId: currentWorkspaceId
+                    })
+                });
+
+                if (response.ok) {
+                    // Download the PDF blob
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `labels_${voucherCount}_vouchers_${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showAlert(`✅ Successfully exported ${voucherCount} labels in one PDF!`, 'success');
+                } else {
+                    const result = await response.json();
+                    showAlert(`❌ Error exporting labels: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error exporting labels:', error);
+                showAlert(`❌ Network error exporting labels. See console for details.`, 'error');
+            } finally {
+                // Hide loading
+                const resultsDiv = document.getElementById('uploadResults');
+                if (resultsDiv) {
+                    resultsDiv.innerHTML = '';
+                }
+            }
+        }
+
+        // Send All Labels Function (no selection required)
+        async function sendAllLabels() {
+            // Get all orders with vouchers that haven't been sent yet
+            const ordersWithVouchers = currentOrders.filter(order => 
+                order.voucherNumber && order.voucherStatus !== 'sent'
+            );
+
+            if (ordersWithVouchers.length === 0) {
+                showAlert('❌ No vouchers ready to send today. Create vouchers first!', 'error');
+                return;
+            }
+
+            const voucherCount = ordersWithVouchers.length;
+            const ordersList = ordersWithVouchers.map(o => o.orderId).join(', ');
+            
+            // Show confirmation dialog
+            const confirmed = confirm(
+                `📤 SEND ALL TODAY'S LABELS TO GENIKI?\n\n` +
+                `🏷️  Found ${voucherCount} vouchers ready to send:\n${ordersList}\n\n` +
+                `⚠️  This will finalize ALL vouchers created today.\n` +
+                `✅ Geniki will be notified for pickup\n` +
+                `✅ Status will change to "Sent"\n\n` +
+                `Are you ready to send?`
+            );
+            
+            if (!confirmed) {
+                return;
+            }
+
+            showLoading('uploadResults', `Sending ${voucherCount} labels to Geniki...`);
+
+            try {
+                // Send any order ID as trigger - API will send all today's vouchers
+                const response = await fetch('/api/send-labels', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderIds: [ordersWithVouchers[0].orderId], // Just need one to trigger
+                        workspaceId: currentWorkspaceId
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`✅ ${result.message}\n📤 Geniki has been notified and packages are ready for pickup!`, 'success');
+                    
+                    // Reload orders to show updated status
+                    loadOrders();
+                } else {
+                    showAlert(`❌ Error sending labels: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error sending labels:', error);
+                showAlert(`❌ Network error sending labels. See console for details.`, 'error');
+            } finally {
+                // Hide loading
+                const resultsDiv = document.getElementById('uploadResults');
+                if (resultsDiv) {
+                    resultsDiv.innerHTML = '';
+                }
+            }
+        }
+
+        // Delete selected orders function
+        async function deleteSelectedOrders() {
+            ensureSelectionInit();
+            
+            if (selectedOrders.size === 0) {
+                showAlert('Please select orders to delete', 'error');
+                return;
+            }
+
+            // Show confirmation dialog
+            const selectedCount = selectedOrders.size;
+            const ordersList = Array.from(selectedOrders).join(', ');
+            
+            const confirmed = confirm(
+                `⚠️ DELETE ${selectedCount} ORDERS PERMANENTLY?\n\n` +
+                `This action CANNOT be undone!\n\n` +
+                `Orders to delete:\n${ordersList}\n\n` +
+                `Are you sure you want to proceed?`
+            );
+            
+            if (!confirmed) {
+                return;
+            }
+
+            showLoading('uploadResults', `Deleting ${selectedCount} orders...`);
+
+            try {
+                const selectedOrderIds = Array.from(selectedOrders);
+                
+                const response = await fetch('/api/imported-orders', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderIds: selectedOrderIds,
+                        workspaceId: currentWorkspaceId
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`✅ Successfully deleted ${result.deletedOrders} orders and ${result.deletedVouchers} vouchers`, 'success');
+                    
+                    // Clear selection and reload orders
+                    clearSelection();
+                    loadOrders();
+                } else {
+                    showAlert(`❌ Error deleting orders: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting orders:', error);
+                showAlert(`❌ Network error deleting orders. See console for details.`, 'error');
+            } finally {
+                // Hide loading (no hideLoading function exists, so just clear the message)
+                const resultsDiv = document.getElementById('uploadResults');
+                if (resultsDiv) {
+                    resultsDiv.innerHTML = '';
+                }
+            }
+        }
+
+        // Packing List Export Function
+        async function exportPackingList() {
+            ensureSelectionInit();
+            
+            if (selectedOrders.size === 0) {
+                showAlert('Please select orders first', 'error');
+                return;
+            }
+
+            const selectedOrderData = currentOrders.filter(order => selectedOrders.has(order.orderId));
+            
+            // Create CSV rows array
+            const csvRows = [];
+            const productCombinations = new Map(); // Track combinations and their counts
+            
+            // Add header
+            csvRows.push(['Order ID', 'Products']);
+            
+            // Add individual order lines
+            selectedOrderData.forEach(order => {
+                // Format products for this order
+                let productsText = '';
+                if (order.products && Array.isArray(order.products)) {
+                    productsText = order.products.map(p => `${p.quantity}x ${p.name}`).join('; ');
+                } else if (order.lineItems) {
+                    productsText = order.lineItems;
+                } else {
+                    productsText = 'No products listed';
+                }
+                
+                // Add to CSV rows
+                csvRows.push([order.orderId || order.orderName, productsText]);
+                
+                // Count this product combination
+                if (productCombinations.has(productsText)) {
+                    productCombinations.set(productsText, productCombinations.get(productsText) + 1);
+                } else {
+                    productCombinations.set(productsText, 1);
+                }
+            });
+            
+            // Add empty row separator
+            csvRows.push(['', '']);
+            
+            // Add packing summary header
+            csvRows.push(['TOTAL:', '']);
+            
+            // Sort combinations by quantity (descending) then alphabetically
+            const sortedCombinations = Array.from(productCombinations.entries())
+                .sort((a, b) => {
+                    if (b[1] !== a[1]) return b[1] - a[1]; // Sort by quantity desc
+                    return a[0].localeCompare(b[0]); // Then alphabetically
+                });
+            
+            // Add packing summary rows
+            sortedCombinations.forEach(([products, count]) => {
+                csvRows.push([`QTY ${count}`, products]);
+            });
+            
+            // Convert to proper CSV format
+            const csvContent = csvRows.map(row => 
+                row.map(field => 
+                    // Escape fields containing commas, quotes, or newlines
+                    typeof field === 'string' && (field.includes(',') || field.includes('"') || field.includes('\n')) 
+                        ? `"${field.replace(/"/g, '""')}"` 
+                        : field
+                ).join(',')
+            ).join('\n');
+            
+            // Download CSV file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().split('T')[0];
+            link.download = `packing_list_${selectedOrders.size}_orders_${timestamp}.csv`;
+            link.click();
+            
+            // Show success message with packing details
+            const uniqueCombinations = productCombinations.size;
+            showAlert(`✅ Packing list exported: ${selectedOrders.size} orders, ${uniqueCombinations} unique product combinations`, 'success');
+        }
+
+        function clearSelection() {
+            selectedOrders.clear();
+            document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = false);
+            const selectAllCheckbox = document.getElementById('selectAll');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+            updateBulkButtonsState();
+        }
+
+        // Make sure to initialize selectedOrders when the page loads
+        function ensureSelectionInit() {
+            if (typeof selectedOrders === 'undefined' || !selectedOrders) {
+                selectedOrders = new Set();
+                console.log('Selection system re-initialized');
+            }
+        }
+
+        async function createSingleVoucher(orderId) {
+            showLoading('uploadResults', `Creating voucher for ${orderId}...`);
+
+            try {
+                // URL encode the orderId to handle special characters like #
+                const encodedOrderId = encodeURIComponent(orderId);
+                const response = await fetch(`/api/imported-orders/${encodedOrderId}/voucher?${getWorkspaceQueryParam()}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        workspaceId: currentWorkspaceId
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`✅ Voucher created successfully for ${orderId}`, 'success');
+                    loadOrders(); // Refresh the table
+                } else {
+                    showAlert(`Failed to create voucher: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function createAllVouchers() {
+            const pendingOrders = currentOrders.filter(o => !o.processed);
+            
+            if (pendingOrders.length === 0) {
+                showAlert('No pending orders to process', 'info');
+                return;
+            }
+
+            if (!confirm(`Create vouchers for ${pendingOrders.length} pending orders?`)) {
+                return;
+            }
+
+            showLoading('uploadResults', `Creating vouchers for ${pendingOrders.length} orders...`);
+
+            try {
+                const response = await fetch('/api/bulk-vouchers-from-csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        limit: pendingOrders.length
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`✅ Bulk processing completed: ${result.successful}/${result.processed} successful`, 'success');
+                    loadOrders(); // Refresh the table
+                } else {
+                    showAlert(`Bulk processing failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function downloadVoucher(voucherNumber) {
+            window.open(`/api/voucher/${voucherNumber}/pdf`, '_blank');
+        }
+
+        function clearFile() {
+            selectedFile = null;
+            document.getElementById('csvFile').value = '';
+            document.getElementById('fileInfo').classList.add('hidden');
+            document.getElementById('uploadResults').innerHTML = '';
+        }
+
+        function refreshData() {
+            loadOrders();
+        }
+
+        // Utility functions
+        function showAlert(message, type) {
+            const alertClass = type === 'error' ? 'alert-error' : 
+                             type === 'success' ? 'alert-success' : 
+                             'alert-info';
+            
+            const alertHtml = `<div class="alert ${alertClass}">${message}</div>`;
+            document.getElementById('uploadResults').innerHTML = alertHtml;
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    document.getElementById('uploadResults').innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function showLoading(elementId, message) {
+            document.getElementById(elementId).innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    ${message}
+                </div>
+            `;
+        }
+
+        function showError(elementId, message) {
+            document.getElementById(elementId).innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <h3>Error Loading Data</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="loadOrders()" style="margin-top: 1rem;">
+                        <i data-feather="refresh-cw"></i>
+                        Retry
+                    </button>
+                </div>
+            `;
+            feather.replace();
+        }
+    </script>
+</body>
+</html>
