@@ -64,6 +64,13 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+  summary?: {
+    total?: number;
+    synced?: number;
+    alreadyFulfilled?: number;
+    failed?: number;
+    succeeded?: number;
+  };
 }
 
 export interface OrdersResponse {
