@@ -32,6 +32,7 @@ export default function OrdersTable({
   currentFilter: externalFilter = 'All',
 }: OrdersTableProps) {
   const { currentWorkspace } = useWorkspace();
+  const currency = currentWorkspace?.invoice_currency || 'EUR';const { currentWorkspace } = useWorkspace();
   const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
   const [filterOpen, setFilterOpen] = useState(false);
   const currentFilter = externalFilter;
@@ -480,7 +481,7 @@ export default function OrdersTable({
                 {/* Amount with Payment Badge */}
                 <td style={{ fontWeight: 600 }}>
                   <div className="amount-wrapper">
-                    {formatPrice(order.totalPrice)}
+                    {formatPrice(order.totalPrice, currency)}
                     <div
                       className={`payment-badge ${paymentMethod}`}
                       data-tooltip={paymentMethod === 'card' ? 'Paid by Card' : 'Cash on Delivery'}

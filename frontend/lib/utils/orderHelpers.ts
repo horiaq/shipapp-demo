@@ -74,11 +74,22 @@ export function formatDate(dateString: string | null): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function formatPrice(price: number | string | null | undefined, currency = '€'): string {
-  if (price === null || price === undefined) return `${currency}0.00`;
+export function formatPrice(price: number | string | null | undefined, currency = 'EUR'): string {
+  if (price === null || price === undefined) return `${getCurrencySymbol(currency)}0.00`;
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-  if (isNaN(numPrice)) return `${currency}0.00`;
-  return `${currency}${numPrice.toFixed(2)}`;
+  if (isNaN(numPrice)) return `${getCurrencySymbol(currency)}0.00`;
+  return `${getCurrencySymbol(currency)}${numPrice.toFixed(2)}`;
+}
+
+export function getCurrencySymbol(currency: string = 'EUR'): string {
+  const symbols: { [key: string]: string } = {
+    'EUR': '€',
+    'RON': 'RON ',
+    'USD': '$',
+    'GBP': '£',
+    'PLN': 'zł',
+  };
+  return symbols[currency] || currency + ' ';
 }
 
 export function getPaymentMethod(financialStatus: string): 'card' | 'cod' {

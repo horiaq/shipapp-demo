@@ -4,6 +4,8 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, User, ShoppingBag, Activity, Package } from 'react-feather';
 import { Order } from '@/lib/types';
+import { useWorkspace } from '@/lib/contexts/WorkspaceContext';
+import { getCurrencySymbol } from '@/lib/utils/orderHelpers';
 
 interface OrderDetailsModalProps {
   order: Order | null;
@@ -13,6 +15,9 @@ interface OrderDetailsModalProps {
 
 export default function OrderDetailsModal({ order, isOpen, onClose }: OrderDetailsModalProps) {
   const [mounted, setMounted] = React.useState(false);
+  const { currentWorkspace } = useWorkspace();
+  const currency = currentWorkspace?.invoice_currency || 'EUR';
+  const currencySymbol = getCurrencySymbol(currency);
 
   useEffect(() => {
     setMounted(true);
@@ -149,7 +154,7 @@ export default function OrderDetailsModal({ order, isOpen, onClose }: OrderDetai
                     </div>
                   </div>
                   <div style={{ fontWeight: 600 }}>
-                    €{((prod.price || 0) * (prod.quantity || 1)).toFixed(2)}
+                    {currencySymbol}{((prod.price || 0) * (prod.quantity || 1)).toFixed(2)}
                   </div>
                 </div>
               ))}
@@ -166,7 +171,7 @@ export default function OrderDetailsModal({ order, isOpen, onClose }: OrderDetai
             >
               <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Total Amount</span>
               <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>
-                €{total.toFixed(2)}
+                {currencySymbol}{total.toFixed(2)}
               </span>
             </div>
           </div>

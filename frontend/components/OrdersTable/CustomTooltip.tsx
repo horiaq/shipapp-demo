@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MapPin, Package, Activity } from 'react-feather';
 import { formatPrice } from '@/lib/utils/orderHelpers';
+import { useWorkspace } from '@/lib/contexts/WorkspaceContext';
 
 interface TooltipProps {
   trigger: React.ReactNode;
@@ -17,6 +18,8 @@ export default function CustomTooltip({ trigger, type, data }: TooltipProps) {
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const { currentWorkspace } = useWorkspace();
+  const currency = currentWorkspace?.invoice_currency || 'EUR';
 
   useEffect(() => {
     setMounted(true);
@@ -105,7 +108,7 @@ export default function CustomTooltip({ trigger, type, data }: TooltipProps) {
                         {product.quantity}x {product.name || product.title}
                       </div>
                       <div className="tooltip-item-meta">
-                        {formatPrice(product.price)} each
+                        {formatPrice(product.price, currency)} each
                       </div>
                     </div>
                   </div>
