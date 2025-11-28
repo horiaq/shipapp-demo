@@ -2268,16 +2268,27 @@ app.post('/api/bulk-vouchers-from-csv', async (req, res) => {
 // Download label PDF
 app.get('/api/voucher/:voucherNumber/pdf', async (req, res) => {
   try {
-    const workspaceId = parseInt(req.headers['x-workspace-id']) || 1;
+    // Try to get workspace ID from header, query param, or default to 1
+    const workspaceId = parseInt(req.headers['x-workspace-id']) || 
+                        parseInt(req.query.workspaceId) || 1;
+    
+    console.log(`📥 PDF Download request for voucher ${req.params.voucherNumber}, workspace ${workspaceId}`);
+    
     const pdf = await getVoucherPdf(req.params.voucherNumber, workspaceId);
     
+    console.log(`✅ PDF ready: ${pdf.length} bytes`);
+    
+    // Set proper headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=label-${req.params.voucherNumber}.pdf`);
+    res.setHeader('Content-Length', pdf.length);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    
     res.send(pdf);
   } catch (error) {
     console.error('Error downloading PDF:', error);
-    
-    // Return proper error without masking the real issue
     console.error(`[PDF Download] Failed for voucher ${req.params.voucherNumber}:`, error.message);
     
     res.status(500).json({ error: error.message });

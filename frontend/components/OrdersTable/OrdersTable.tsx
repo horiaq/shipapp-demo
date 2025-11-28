@@ -575,41 +575,19 @@ export default function OrdersTable({
 
                     {/* Voucher Badge */}
                     {order.voucherNumber ? (
-                      <div
+                      <a
                         key={`doc-voucher-${order.orderName}`}
+                        href={`/api/voucher/${order.voucherNumber}/pdf?workspaceId=${currentWorkspace?.workspace_id || 1}`}
+                        download
                         className="doc-badge doc-shipping voucher-with-copy"
-                        onClick={async (e) => {
+                        onClick={(e) => {
                           e.stopPropagation();
-                          if (!currentWorkspace) return;
-                          
-                          try {
-                            const response = await fetch(`/api/voucher/${order.voucherNumber}/pdf`, {
-                              headers: {
-                                'X-Workspace-Id': currentWorkspace.workspace_id.toString()
-                              }
-                            });
-                            
-                            if (!response.ok) throw new Error('Failed to download PDF');
-                            
-                            const blob = await response.blob();
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `label-${order.voucherNumber}.pdf`;
-                            document.body.appendChild(a);
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                            document.body.removeChild(a);
-                          } catch (error: any) {
-                            alert(`Error downloading PDF: ${error.message}`);
-                          }
                         }}
                         onMouseEnter={(e) => handleVoucherMouseEnter(order.voucherNumber!, e)}
                         onMouseLeave={handleVoucherMouseLeave}
-                        style={{ cursor: 'pointer' }}
                       >
                         <Truck size={14} />
-                      </div>
+                      </a>
                     ) : status === 'Unfulfilled' ? (
                       <div
                         key={`doc-voucher-create-${order.orderName}`}
