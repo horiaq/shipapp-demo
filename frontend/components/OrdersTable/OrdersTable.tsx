@@ -575,19 +575,48 @@ export default function OrdersTable({
 
                     {/* Voucher Badge */}
                     {order.voucherNumber ? (
-                      <a
+                      <div
                         key={`doc-voucher-${order.orderName}`}
-                        href={`/api/voucher/${order.voucherNumber}/pdf?workspaceId=${currentWorkspace?.workspace_id || 1}`}
-                        download
                         className="doc-badge doc-shipping voucher-with-copy"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
+                          if (!currentWorkspace) return;
+                          
+                          try {
+                            // Force download using fetch and blob
+                            const url = `/api/voucher/${order.voucherNumber}/pdf?workspaceId=${currentWorkspace.workspace_id}`;
+                            const response = await fetch(url);
+                            
+                            if (!response.ok) {
+                              throw new Error('Download failed');
+                            }
+                            
+                            const blob = await response.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            
+                            // Create temporary link and trigger download
+                            const link = document.createElement('a');
+                            link.href = blobUrl;
+                            link.download = `label-${order.voucherNumber}.pdf`;
+                            link.style.display = 'none';
+                            document.body.appendChild(link);
+                            link.click();
+                            
+                            // Cleanup
+                            setTimeout(() => {
+                              document.body.removeChild(link);
+                              URL.revokeObjectURL(blobUrl);
+                            }, 100);
+                          } catch (error: any) {
+                            alert(`Error: ${error.message}`);
+                          }
                         }}
                         onMouseEnter={(e) => handleVoucherMouseEnter(order.voucherNumber!, e)}
                         onMouseLeave={handleVoucherMouseLeave}
+                        style={{ cursor: 'pointer' }}
                       >
                         <Truck size={14} />
-                      </a>
+                      </div>
                     ) : status === 'Unfulfilled' ? (
                       <div
                         key={`doc-voucher-create-${order.orderName}`}
