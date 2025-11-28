@@ -145,3 +145,14 @@ export async function syncFromShopify(orderIds: string[], workspaceId: number): 
   return response.json();
 }
 
+export async function cancelOrder(orderId: string, workspaceId: number): Promise<ApiResponse<any>> {
+  const response = await fetchWithAuth(`/api/imported-orders/${encodeURIComponent(orderId)}/cancel`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Workspace-Id': workspaceId.toString(),
+    },
+  });
+  return response.json();
+}
+

@@ -1,8 +1,13 @@
 import { Order } from '../types';
 
-type OrderStatus = 'Unfulfilled' | 'AWB Created' | 'Sent' | 'Fulfilled' | 'In Transit' | 'Delivered' | 'Returned' | 'Completed';
+type OrderStatus = 'Cancelled' | 'Unfulfilled' | 'AWB Created' | 'Sent' | 'Fulfilled' | 'In Transit' | 'Delivered' | 'Returned' | 'Completed';
 
 export function getOrderStatus(order: Order): OrderStatus {
+  // Check for cancelled status FIRST
+  if (order.orderStatus === 'cancelled') {
+    return 'Cancelled';
+  }
+  
   // Use the calculated order_status from backend if available
   if (order.orderStatus) {
     return formatOrderStatus(order.orderStatus);
@@ -49,6 +54,8 @@ export function getOrderStatus(order: Order): OrderStatus {
 
 function formatOrderStatus(status: string): OrderStatus {
   switch (status) {
+    case 'cancelled':
+      return 'Cancelled';
     case 'unfulfilled':
       return 'Unfulfilled';
     case 'awb_created':

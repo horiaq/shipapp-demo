@@ -1384,7 +1384,20 @@
             background: #ef4444;
         }
         
-        /* 7. Completed - Emerald (darker green) */
+        /* 7. Cancelled - Dark Red */
+        .status-cancelled {
+            background: rgba(127, 29, 29, 0.1);
+            color: #991b1b;
+            border: 1px solid rgba(127, 29, 29, 0.2);
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
+        
+        .status-cancelled::before {
+            background: #991b1b;
+        }
+        
+        /* 8. Completed - Emerald (darker green) */
         .status-completed {
             background: rgba(5, 150, 105, 0.1);
             color: #059669;

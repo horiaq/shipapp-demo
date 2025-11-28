@@ -3,8 +3,21 @@
 import React from 'react';
 import { Plus } from 'react-feather';
 import { StatCard, RevenueChart, OrderStatusChart, RecentOrdersTable } from '@/components/Dashboard';
+import { useDashboardStats } from '@/lib/hooks/useDashboardStats';
 
 export default function DashboardPage() {
+  const { stats, loading } = useDashboardStats();
+
+  // Calculate processing rate (percentage of orders that have been processed)
+  const processingRate = stats && stats.totalOrders > 0 
+    ? ((stats.processedOrders / stats.totalOrders) * 100).toFixed(1)
+    : '0';
+
+  // Format revenue for display
+  const formattedRevenue = stats 
+    ? `€${parseFloat(stats.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : '€0.00';
+
   return (
     <div className="dashboard-container">
       <div className="page-header">
@@ -22,30 +35,26 @@ export default function DashboardPage() {
       <div className="stats-grid">
         <StatCard
           icon="DollarSign"
-          value="€48,250"
+          value={loading ? 'Loading...' : formattedRevenue}
           label="Total Revenue"
-          trend={{ direction: 'up', value: '+12.5%' }}
           color="primary"
         />
         <StatCard
           icon="ShoppingBag"
-          value="1,240"
+          value={loading ? 'Loading...' : stats?.totalOrders.toLocaleString() || '0'}
           label="Total Orders"
-          trend={{ direction: 'up', value: '+8.2%' }}
           color="secondary"
         />
         <StatCard
           icon="Activity"
-          value="85%"
-          label="Conversion Rate"
-          trend={{ direction: 'down', value: '-2.4%' }}
+          value={loading ? 'Loading...' : `${processingRate}%`}
+          label="Processing Rate"
           color="accent"
         />
         <StatCard
-          icon="Users"
-          value="3,820"
-          label="Active Users"
-          trend={{ direction: 'up', value: '+5.1%' }}
+          icon="Package"
+          value={loading ? 'Loading...' : stats?.processedOrders.toLocaleString() || '0'}
+          label="Processed Orders"
           color="success"
         />
       </div>

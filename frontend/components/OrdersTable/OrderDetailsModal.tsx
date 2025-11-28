@@ -1,20 +1,23 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, ShoppingBag, Activity, Package } from 'react-feather';
+import { X, User, ShoppingBag, Activity, Package, XCircle } from 'react-feather';
 import { Order } from '@/lib/types';
 import { useWorkspace } from '@/lib/contexts/WorkspaceContext';
 import { getCurrencySymbol } from '@/lib/utils/orderHelpers';
+import { cancelOrder } from '@/lib/api/orders';
 
 interface OrderDetailsModalProps {
   order: Order | null;
   isOpen: boolean;
   onClose: () => void;
+  onOrderUpdated?: () => void;
 }
 
-export default function OrderDetailsModal({ order, isOpen, onClose }: OrderDetailsModalProps) {
-  const [mounted, setMounted] = React.useState(false);
+export default function OrderDetailsModal({ order, isOpen, onClose, onOrderUpdated }: OrderDetailsModalProps) {
+  const [mounted, setMounted] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const { currentWorkspace } = useWorkspace();
   const currency = currentWorkspace?.invoice_currency || 'EUR';
   const currencySymbol = getCurrencySymbol(currency);
@@ -47,6 +50,40 @@ export default function OrderDetailsModal({ order, isOpen, onClose }: OrderDetai
 
   // Build timeline based on order status
   const timeline = buildTimeline(order);
+
+  // Check if order is already cancelled
+  const isCancelled = order.orderStatus === 'cancelled';
+
+  // Handle cancel order
+  const handleCancelOrder = async () => {
+    if (!currentWorkspace || !order) return;
+
+    const confirmed = confirm(
+      `Are you sure you want to cancel order ${order.orderName}?\n\n` +
+      `This will exclude it from revenue calculations and mark it as cancelled. This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setCancelling(true);
+    try {
+      const result = await cancelOrder(order.orderName, currentWorkspace.workspace_id);
+      
+      if (result.success) {
+        alert(`Order ${order.orderName} has been cancelled successfully.`);
+        onClose();
+        if (onOrderUpdated) {
+          onOrderUpdated(); // Refresh the orders list
+        }
+      } else {
+        alert(`Failed to cancel order: ${result.error}`);
+      }
+    } catch (error: any) {
+      alert(`Error cancelling order: ${error.message}`);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   // Format date
   const formatDate = (dateString: string | null) => {
@@ -201,33 +238,68 @@ export default function OrderDetailsModal({ order, isOpen, onClose }: OrderDetai
         </div>
 
         <div className="modal-footer">
-          {order.oblioInvoiceUrl && (
-            <a
-              href={order.oblioInvoiceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="action-btn"
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--border-light)',
-                color: 'var(--text-muted)',
-                boxShadow: 'none',
-                textDecoration: 'none',
-              }}
-            >
-              Download Invoice
-            </a>
-          )}
-          {order.voucherNumber && (
+          <div style={{ display: 'flex', gap: '0.75rem', flex: 1 }}>
+            {order.oblioInvoiceUrl && (
+              <a
+                href={order.oblioInvoiceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="action-btn"
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-muted)',
+                  boxShadow: 'none',
+                  textDecoration: 'none',
+                }}
+              >
+                Download Invoice
+              </a>
+            )}
+            {order.voucherNumber && (
+              <button
+                className="action-btn"
+                onClick={() => {
+                  // Track order functionality
+                  alert(`Tracking voucher: ${order.voucherNumber}`);
+                }}
+              >
+                Track Order
+              </button>
+            )}
+          </div>
+          {!isCancelled && (
             <button
               className="action-btn"
-              onClick={() => {
-                // Track order functionality
-                alert(`Tracking voucher: ${order.voucherNumber}`);
+              onClick={handleCancelOrder}
+              disabled={cancelling}
+              style={{
+                background: 'transparent',
+                border: '1px solid #ef4444',
+                color: '#ef4444',
+                boxShadow: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
               }}
             >
-              Track Order
+              <XCircle size={16} />
+              {cancelling ? 'Cancelling...' : 'Cancel Order'}
             </button>
+          )}
+          {isCancelled && (
+            <div
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#fee2e2',
+                color: '#dc2626',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+              }}
+            >
+              Order Cancelled
+            </div>
           )}
         </div>
       </div>
@@ -250,12 +322,26 @@ function buildTimeline(order: Order) {
     });
   };
 
+  // Check if order is cancelled
+  const isCancelled = order.orderStatus === 'cancelled';
+
   // Order placed
   timeline.push({
     title: 'Order Placed',
     date: formatDate(order.importedAt),
     completed: true,
   });
+
+  // If cancelled, show that and stop
+  if (isCancelled) {
+    timeline.push({
+      title: 'Order Cancelled',
+      date: 'Cancelled',
+      completed: true,
+      current: true,
+    });
+    return timeline;
+  }
 
   // Voucher created
   if (order.voucherNumber) {

@@ -4354,6 +4354,103 @@ app.get('/api/workspaces/:id/delivery-stats', authenticateUser, authorizeWorkspa
   }
 });
 
+// Cancel an order (sets status to cancelled)
+app.patch('/api/imported-orders/:orderId/cancel', authenticateUser, authorizeWorkspace, async (req, res) => {
+  try {
+    const workspaceId = req.workspaceId;
+    const { orderId } = req.params;
+    
+    console.log(`🚫 Cancelling order ${orderId} in workspace ${workspaceId}`);
+    
+    // Update order status to cancelled
+    const result = await pool.query(`
+      UPDATE orders 
+      SET order_status = 'cancelled'
+      WHERE order_name = $1 AND workspace_id = $2
+      RETURNING *
+    `, [orderId, workspaceId]);
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+    
+    console.log(`✅ Order ${orderId} cancelled successfully`);
+    
+    res.json({
+      success: true,
+      message: 'Order cancelled successfully',
+      order: result.rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get dashboard statistics for a workspace
+app.get('/api/workspaces/:id/dashboard-stats', authenticateUser, authorizeWorkspace, async (req, res) => {
+  try {
+    const workspaceId = req.workspaceId; // From authorizeWorkspace middleware
+    
+    // Get total revenue from all orders (excluding cancelled)
+    const revenueResult = await pool.query(`
+      SELECT 
+        COALESCE(SUM(CAST(total_price AS DECIMAL)), 0) as total_revenue,
+        COUNT(DISTINCT order_name) as total_orders
+      FROM orders
+      WHERE workspace_id = $1 AND (order_status IS NULL OR order_status != 'cancelled')
+    `, [workspaceId]);
+    
+    // Get orders with vouchers (processed orders, excluding cancelled)
+    const processedResult = await pool.query(`
+      SELECT COUNT(DISTINCT order_name) as processed_orders
+      FROM orders
+      WHERE workspace_id = $1 AND processed = true AND (order_status IS NULL OR order_status != 'cancelled')
+    `, [workspaceId]);
+    
+    // Get orders by status for the pie chart
+    const statusResult = await pool.query(`
+      SELECT 
+        CASE 
+          WHEN processed = true THEN 'Processed'
+          WHEN fulfillment_status = 'fulfilled' THEN 'Fulfilled'
+          ELSE 'Pending'
+        END as status,
+        COUNT(*) as count
+      FROM orders
+      WHERE workspace_id = $1
+      GROUP BY status
+    `, [workspaceId]);
+    
+    // Calculate stats
+    const stats = {
+      totalRevenue: parseFloat(revenueResult.rows[0].total_revenue || 0).toFixed(2),
+      totalOrders: parseInt(revenueResult.rows[0].total_orders || 0),
+      processedOrders: parseInt(processedResult.rows[0].processed_orders || 0),
+      ordersByStatus: statusResult.rows
+    };
+    
+    res.json({
+      success: true,
+      stats
+    });
+    
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // ==================== SCHEDULED JOBS ====================
 
 // Tracking status update job - runs twice daily at 10:00 AM and 6:00 PM

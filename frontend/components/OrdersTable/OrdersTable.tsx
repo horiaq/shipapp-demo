@@ -650,6 +650,7 @@ export default function OrdersTable({
       order={selectedOrder}
       isOpen={isModalOpen}
       onClose={handleCloseModal}
+      onOrderUpdated={onRefresh}
     />
 
     {/* Voucher Copy Tooltip */}
