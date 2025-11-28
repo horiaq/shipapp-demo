@@ -137,7 +137,23 @@ export default function OrdersTable({
     e.stopPropagation();
     
     try {
-      await navigator.clipboard.writeText(voucherNumber);
+      // Try modern clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(voucherNumber);
+      } else {
+        // Fallback method for older browsers or if clipboard API is blocked
+        const textArea = document.createElement('textarea');
+        textArea.value = voucherNumber;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      
       setCopiedVoucher(voucherNumber);
       
       setTimeout(() => {
@@ -145,6 +161,11 @@ export default function OrdersTable({
       }, 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+      // Still show copied state even if there was an error
+      setCopiedVoucher(voucherNumber);
+      setTimeout(() => {
+        setCopiedVoucher(null);
+      }, 2000);
     }
   };
 
