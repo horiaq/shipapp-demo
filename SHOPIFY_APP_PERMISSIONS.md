@@ -249,3 +249,4 @@ If you encounter issues with Shopify permissions:
 **App Version:** eTrack v1.0  
 **Shopify API Version:** 2024-01
 
+

@@ -192,3 +192,4 @@ SELECT 'user_sessions', COUNT(*) FROM user_sessions;
 \echo '2. Or manually insert a test user with SQL'
 \echo ''
 
+

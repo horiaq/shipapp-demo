@@ -165,3 +165,4 @@ echo ""
 print_status "Service status:"
 ssh "$SERVER_USER@$SERVER_IP" "pm2 status"
 
+

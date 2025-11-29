@@ -96,3 +96,4 @@ WHERE v.workspace_id IN (
 \echo '✅ Migration complete! All workspaces assigned to horia@wiresells.com'
 \echo ''
 
+

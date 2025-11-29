@@ -333,3 +333,4 @@ After deployment, access your application at:
 5. Configure email settings for notifications
 6. Add your API keys (Geniki, Shopify, etc.)
 
+

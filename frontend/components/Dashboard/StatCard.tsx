@@ -51,3 +51,4 @@ export default function StatCard({ icon, value, label, trend, color }: StatCardP
   );
 }
 
+

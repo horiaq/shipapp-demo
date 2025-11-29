@@ -308,3 +308,4 @@ echo "  - Restart services: ssh $SERVER_USER@$SERVER_IP 'pm2 restart all'"
 echo "  - Update app: ssh $SERVER_USER@$SERVER_IP 'cd $APP_DIR && git pull && pm2 restart all'"
 echo ""
 
+

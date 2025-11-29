@@ -1161,8 +1161,9 @@ function calculateOrderStatus(order) {
   return 'unfulfilled';
 }
 
-async function getAllOrders(workspaceId, limit = 50, offset = 0) {
-  const query = `
+async function getAllOrders(workspaceId, limit = 50, offset = 0, statusFilter = null) {
+  // Base query that gets all order data with voucher info
+  let query = `
     SELECT DISTINCT ON (o.order_name)
       o.*,
       v.voucher_number,
@@ -1179,7 +1180,64 @@ async function getAllOrders(workspaceId, limit = 50, offset = 0) {
       v.shopify_fulfillment_id
     FROM orders o
     LEFT JOIN vouchers v ON o.order_name = v.order_name AND v.workspace_id = $1
-    WHERE o.workspace_id = $1
+    WHERE o.workspace_id = $1`;
+  
+  // Add status filter conditions if specified
+  if (statusFilter && statusFilter !== 'All') {
+    const normalizedFilter = statusFilter.toLowerCase().replace(/\s+/g, '_');
+    
+    // Add WHERE conditions based on status logic from calculateOrderStatus
+    if (normalizedFilter === 'completed') {
+      query += ` AND o.oblio_invoice_id IS NOT NULL 
+                 AND (v.shopify_fulfillment_id IS NOT NULL OR o.fulfillment_status = 'fulfilled')
+                 AND (o.financial_status = 'paid' OR o.payment_status = 'paid')
+                 AND v.delivered_at IS NOT NULL`;
+    } else if (normalizedFilter === 'returned') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND (UPPER(COALESCE(v.delivery_status, '')) LIKE '%RETURN%' 
+                      OR UPPER(COALESCE(v.current_location, '')) LIKE '%SENDER%' 
+                      OR UPPER(COALESCE(v.current_location, '')) LIKE '%ΑΠΟΣΤΟΛ%')`;
+    } else if (normalizedFilter === 'delivered') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND UPPER(COALESCE(v.delivery_status, '')) LIKE '%DELIVERED%'
+                 AND NOT (UPPER(COALESCE(v.delivery_status, '')) LIKE '%RETURN%' 
+                          OR UPPER(COALESCE(v.current_location, '')) LIKE '%SENDER%' 
+                          OR UPPER(COALESCE(v.current_location, '')) LIKE '%ΑΠΟΣΤΟΛ%')
+                 AND NOT (o.oblio_invoice_id IS NOT NULL 
+                          AND (v.shopify_fulfillment_id IS NOT NULL OR o.fulfillment_status = 'fulfilled')
+                          AND (o.financial_status = 'paid' OR o.payment_status = 'paid')
+                          AND v.delivered_at IS NOT NULL)`;
+    } else if (normalizedFilter === 'in_transit') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND v.delivery_status IS NOT NULL
+                 AND v.delivery_status != ''
+                 AND UPPER(v.delivery_status) NOT LIKE '%DELIVERED%'
+                 AND NOT (UPPER(COALESCE(v.delivery_status, '')) LIKE '%RETURN%' 
+                          OR UPPER(COALESCE(v.current_location, '')) LIKE '%SENDER%' 
+                          OR UPPER(COALESCE(v.current_location, '')) LIKE '%ΑΠΟΣΤΟΛ%')`;
+    } else if (normalizedFilter === 'fulfilled') {
+      query += ` AND o.fulfillment_status = 'fulfilled' 
+                 AND (v.delivery_status IS NULL OR v.delivery_status = '')
+                 AND (v.voucher_number IS NULL OR v.voucher_number = '')`;
+    } else if (normalizedFilter === 'sent') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND COALESCE(v.sent_to_geniki, FALSE) = TRUE
+                 AND (v.delivery_status IS NULL OR v.delivery_status = '')`;
+    } else if (normalizedFilter === 'awb_created') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND COALESCE(v.sent_to_geniki, FALSE) = FALSE
+                 AND (v.delivery_status IS NULL OR v.delivery_status = '')`;
+    } else if (normalizedFilter === 'unfulfilled') {
+      query += ` AND (v.voucher_number IS NULL OR v.voucher_number = '')`;
+    }
+  }
+  
+  query += `
     ORDER BY 
       o.order_name,
       v.created_at DESC NULLS LAST,
@@ -1190,6 +1248,7 @@ async function getAllOrders(workspaceId, limit = 50, offset = 0) {
       END DESC,
       o.imported_at DESC
     LIMIT $2 OFFSET $3`;
+  
   const result = await pool.query(query, [workspaceId, limit, offset]);
   
   // Calculate and add order_status for each order
@@ -1201,11 +1260,69 @@ async function getAllOrders(workspaceId, limit = 50, offset = 0) {
   return ordersWithStatus;
 }
 
-async function countOrders(workspaceId) {
-  const query = `
+async function countOrders(workspaceId, statusFilter = null) {
+  // Base query
+  let query = `
     SELECT COUNT(DISTINCT o.order_name) as total
     FROM orders o
+    LEFT JOIN vouchers v ON o.order_name = v.order_name AND v.workspace_id = $1
     WHERE o.workspace_id = $1`;
+  
+  // Add status filter conditions if specified
+  if (statusFilter && statusFilter !== 'All') {
+    const normalizedFilter = statusFilter.toLowerCase().replace(/\s+/g, '_');
+    
+    // Add WHERE conditions based on status logic from calculateOrderStatus
+    if (normalizedFilter === 'completed') {
+      query += ` AND o.oblio_invoice_id IS NOT NULL 
+                 AND (v.shopify_fulfillment_id IS NOT NULL OR o.fulfillment_status = 'fulfilled')
+                 AND (o.financial_status = 'paid' OR o.payment_status = 'paid')
+                 AND v.delivered_at IS NOT NULL`;
+    } else if (normalizedFilter === 'returned') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND (UPPER(COALESCE(v.delivery_status, '')) LIKE '%RETURN%' 
+                      OR UPPER(COALESCE(v.current_location, '')) LIKE '%SENDER%' 
+                      OR UPPER(COALESCE(v.current_location, '')) LIKE '%ΑΠΟΣΤΟΛ%')`;
+    } else if (normalizedFilter === 'delivered') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND UPPER(COALESCE(v.delivery_status, '')) LIKE '%DELIVERED%'
+                 AND NOT (UPPER(COALESCE(v.delivery_status, '')) LIKE '%RETURN%' 
+                          OR UPPER(COALESCE(v.current_location, '')) LIKE '%SENDER%' 
+                          OR UPPER(COALESCE(v.current_location, '')) LIKE '%ΑΠΟΣΤΟΛ%')
+                 AND NOT (o.oblio_invoice_id IS NOT NULL 
+                          AND (v.shopify_fulfillment_id IS NOT NULL OR o.fulfillment_status = 'fulfilled')
+                          AND (o.financial_status = 'paid' OR o.payment_status = 'paid')
+                          AND v.delivered_at IS NOT NULL)`;
+    } else if (normalizedFilter === 'in_transit') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND v.delivery_status IS NOT NULL
+                 AND v.delivery_status != ''
+                 AND UPPER(v.delivery_status) NOT LIKE '%DELIVERED%'
+                 AND NOT (UPPER(COALESCE(v.delivery_status, '')) LIKE '%RETURN%' 
+                          OR UPPER(COALESCE(v.current_location, '')) LIKE '%SENDER%' 
+                          OR UPPER(COALESCE(v.current_location, '')) LIKE '%ΑΠΟΣΤΟΛ%')`;
+    } else if (normalizedFilter === 'fulfilled') {
+      query += ` AND o.fulfillment_status = 'fulfilled' 
+                 AND (v.delivery_status IS NULL OR v.delivery_status = '')
+                 AND (v.voucher_number IS NULL OR v.voucher_number = '')`;
+    } else if (normalizedFilter === 'sent') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND COALESCE(v.sent_to_geniki, FALSE) = TRUE
+                 AND (v.delivery_status IS NULL OR v.delivery_status = '')`;
+    } else if (normalizedFilter === 'awb_created') {
+      query += ` AND v.voucher_number IS NOT NULL 
+                 AND v.voucher_number != ''
+                 AND COALESCE(v.sent_to_geniki, FALSE) = FALSE
+                 AND (v.delivery_status IS NULL OR v.delivery_status = '')`;
+    } else if (normalizedFilter === 'unfulfilled') {
+      query += ` AND (v.voucher_number IS NULL OR v.voucher_number = '')`;
+    }
+  }
+  
   const result = await pool.query(query, [workspaceId]);
   return parseInt(result.rows[0].total);
 }
@@ -1821,25 +1938,19 @@ app.get('/api/imported-orders', authenticateUser, authorizeWorkspace, async (req
     const offset = (page - 1) * limit;
     const statusFilter = req.query.status || null;
     
-    // Get total count first
-    let totalCount = await countOrders(workspaceId);
+    console.log(`📊 Fetching orders - Page: ${page}, Limit: ${limit}, Status Filter: ${statusFilter || 'None'}`);
     
-    // Get orders for current page
-    const allOrders = await getAllOrders(workspaceId, limit, offset);
+    // Get total count with filter applied at database level
+    const totalCount = await countOrders(workspaceId, statusFilter);
     
-    // Filter by status if requested
-    let orders = allOrders;
-    if (statusFilter && statusFilter !== 'All') {
-      const normalizedFilter = statusFilter.toLowerCase().replace(/\s+/g, '_');
-      orders = allOrders.filter(order => order.order_status === normalizedFilter);
-      // Note: When filtering, we might need to fetch more pages to fill the limit
-      // For now, just show what matches on this page
-    }
+    // Get orders for current page with filter applied at database level
+    const orders = await getAllOrders(workspaceId, limit, offset, statusFilter);
     
-    // Calculate pagination based on total count (not filtered count for simplicity)
+    // Calculate pagination based on filtered count
     const totalOrders = totalCount;
     const totalPages = Math.ceil(totalOrders / limit);
     
+    console.log(`✅ Found ${orders.length} orders on page ${page} of ${totalPages} (${totalOrders} total matching filter)`);
     
     res.json({
       success: true,
@@ -1867,12 +1978,15 @@ app.get('/api/imported-orders', authenticateUser, authorizeWorkspace, async (req
           voucherNumber: order.voucher_number,
           voucherStatus: order.voucher_status, 
           voucherCreatedAt: order.voucher_created_at,
+          voucherCreated: order.voucher_created_at,
           deliveryStatus: order.delivery_status,
           deliveryStatusCode: order.delivery_status_code,
           currentLocation: order.current_location,
           deliveredAt: order.delivered_at,
           deliveryStatusUpdatedAt: order.delivery_status_updated_at,
-          orderStatus: order.order_status, // THIS WAS MISSING!
+          orderStatus: order.order_status,
+          sentToGeniki: order.sent_to_geniki,
+          sentToGenikiAt: order.sent_to_geniki_at,
           importedAt: order.imported_at,
           lineItems: order.line_items,
           products: order.products ? (typeof order.products === 'string' ? JSON.parse(order.products) : order.products) : null,
@@ -1883,7 +1997,8 @@ app.get('/api/imported-orders', authenticateUser, authorizeWorkspace, async (req
           oblioSeriesName: order.oblio_series_name,
           oblioInvoiceNumber: order.oblio_invoice_number,
           oblioInvoiceUrl: order.oblio_invoice_url,
-          invoicedAt: order.invoiced_at
+          invoicedAt: order.invoiced_at,
+          shopifyOrderId: order.shopify_order_id
       }))
     });
   } catch (error) {

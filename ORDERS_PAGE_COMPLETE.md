@@ -273,3 +273,4 @@ The bulk actions dropdown is ready, just needs implementation:
 
 The page is production-ready and will work seamlessly with your existing Shopify/Geniki/Oblio integrations! ✨
 
+
