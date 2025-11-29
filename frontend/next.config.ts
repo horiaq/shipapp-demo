@@ -1,10 +1,6 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Disable network interface detection to avoid macOS system error
-  experimental: {
-    skipTrailingSlashRedirect: true,
-  },
   async rewrites() {
     return [
       {
