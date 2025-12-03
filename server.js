@@ -969,15 +969,18 @@ async function createMeestParcel(orderData, workspaceId) {
     const parcelNumber = result.parcelNumber || parcelRequest.parcelNumber;
 
     console.log(`✅ Meest parcel created: ${parcelNumber}`);
-    console.log(`   Meest response keys: ${Object.keys(result).join(', ')}`);
-    console.log(`   result.parcelNumber: ${result.parcelNumber || 'not set'}`);
-    console.log(`   result.lastMileTrackingNumber: ${result.lastMileTrackingNumber || 'not set'}`);
-    console.log(`   result.firstMileTrackingNUmber: ${result.firstMileTrackingNUmber || 'not set'}`);
-    console.log(`   result.objectID: ${result.objectID || 'not set'}`);
-    console.log(`   Has lastMileLabel: ${!!result.lastMileLabel} (len: ${result.lastMileLabel?.length || 0})`);
-    console.log(`   Has firstMileLabel: ${!!result.firstMileLabel} (len: ${result.firstMileLabel?.length || 0})`);
-    console.log(`   result.parcels: ${JSON.stringify(result.parcels || 'not set').substring(0, 300)}`);
-    console.log(`   Full response (truncated): ${JSON.stringify(result).substring(0, 600)}`);
+    console.log(`   lastMileNote: ${result.lastMileNote || 'none'}`);
+    console.log(`   firstMileNote: ${result.firstMileNote || 'none'}`);
+    console.log(`   Has lastMileLabel: ${!!result.lastMileLabel}, Has firstMileLabel: ${!!result.firstMileLabel}`);
+
+    // Check if Meest had an internal error during creation (e.g., timeout)
+    const hasCreationError = (result.lastMileNote && result.lastMileNote.includes('Problem')) ||
+                             (result.firstMileNote && result.firstMileNote.includes('Problem'));
+    if (hasCreationError) {
+      const errorNote = result.lastMileNote || result.firstMileNote;
+      console.error(`❌ Meest parcel creation had internal error: ${errorNote}`);
+      throw new Error(`Meest parcel creation failed: ${errorNote}`);
+    }
 
     // Get label from response (lastMileLabel or firstMileLabel)
     let labelData = result.lastMileLabel || result.firstMileLabel || null;
@@ -2656,7 +2659,25 @@ app.post('/api/bulk-create-vouchers', async (req, res) => {
         let courierType;
 
         if (defaultCourier === 'meest') {
-          voucher = await createMeestParcel(orderData, workspaceId);
+          // Retry Meest parcel creation up to 3 times (Meest has internal timeouts)
+          let lastError = null;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              if (attempt > 1) {
+                console.log(`   Retry ${attempt}/3 for ${orderId}, waiting 5s...`);
+                await new Promise(r => setTimeout(r, 5000));
+              }
+              voucher = await createMeestParcel(orderData, workspaceId);
+              lastError = null;
+              break;
+            } catch (meestError) {
+              lastError = meestError;
+              console.warn(`⚠️ Meest creation attempt ${attempt} failed for ${orderId}: ${meestError.message}`);
+              if (attempt === 3) {
+                throw meestError;
+              }
+            }
+          }
           courierType = 'meest';
         } else {
           const geinikiOrder = {
