@@ -2889,17 +2889,27 @@ app.delete('/api/voucher/:voucherNumber/cancel', async (req, res) => {
     console.log(`📦 Voucher courier type: ${courierType}`);
 
     // Try to cancel at courier API, but continue even if it fails
+    // Use a timeout to prevent hanging on slow API calls
     let apiCancelSuccess = false;
     let apiCancelError = null;
 
+    const cancelWithTimeout = (promise, timeoutMs) => {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('API timeout - continuing with database deletion')), timeoutMs)
+        )
+      ]);
+    };
+
     try {
       if (courierType === 'meest') {
-        await cancelMeestParcel(voucherNumber, workspaceId);
+        await cancelWithTimeout(cancelMeestParcel(voucherNumber, workspaceId), 10000);
         apiCancelSuccess = true;
       } else {
         // Geniki uses job_id for cancellation
         if (voucher.job_id) {
-          await cancelJob(voucher.job_id, workspaceId);
+          await cancelWithTimeout(cancelJob(voucher.job_id, workspaceId), 10000);
           apiCancelSuccess = true;
         } else {
           console.log('⚠️ No job_id found, skipping courier API cancellation');
