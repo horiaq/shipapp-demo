@@ -971,10 +971,13 @@ async function createMeestParcel(orderData, workspaceId) {
     console.log(`✅ Meest parcel created: ${parcelNumber}`);
     console.log(`   Meest response keys: ${Object.keys(result).join(', ')}`);
     console.log(`   result.parcelNumber: ${result.parcelNumber || 'not set'}`);
-    console.log(`   result.trackingNumber: ${result.trackingNumber || 'not set'}`);
     console.log(`   result.lastMileTrackingNumber: ${result.lastMileTrackingNumber || 'not set'}`);
+    console.log(`   result.firstMileTrackingNUmber: ${result.firstMileTrackingNUmber || 'not set'}`);
     console.log(`   result.objectID: ${result.objectID || 'not set'}`);
-    console.log(`   Has lastMileLabel: ${!!result.lastMileLabel}, Has firstMileLabel: ${!!result.firstMileLabel}`);
+    console.log(`   Has lastMileLabel: ${!!result.lastMileLabel} (len: ${result.lastMileLabel?.length || 0})`);
+    console.log(`   Has firstMileLabel: ${!!result.firstMileLabel} (len: ${result.firstMileLabel?.length || 0})`);
+    console.log(`   result.parcels: ${JSON.stringify(result.parcels || 'not set').substring(0, 300)}`);
+    console.log(`   Full response (truncated): ${JSON.stringify(result).substring(0, 600)}`);
 
     // Get label from response (lastMileLabel or firstMileLabel)
     let labelData = result.lastMileLabel || result.firstMileLabel || null;
