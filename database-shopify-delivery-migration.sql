@@ -29,3 +29,7 @@ COMMENT ON COLUMN vouchers.shopify_order_id IS 'Shopify order ID for reference';
 SELECT 'Migration completed: Shopify delivery tracking fields added' AS status;
 
 
+
+
+
+

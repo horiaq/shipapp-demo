@@ -156,3 +156,14 @@ export async function cancelOrder(orderId: string, workspaceId: number): Promise
   return response.json();
 }
 
+export async function cancelVoucher(voucherNumber: string, workspaceId: number): Promise<ApiResponse<any>> {
+  const response = await fetchWithAuth(`/api/voucher/${encodeURIComponent(voucherNumber)}/cancel?workspaceId=${workspaceId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Workspace-Id': workspaceId.toString(),
+    },
+  });
+  return response.json();
+}
+

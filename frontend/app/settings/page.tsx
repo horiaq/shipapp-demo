@@ -51,6 +51,14 @@ interface Settings {
   meest_username: string;
   meest_password: string;
   meest_api_key: string;
+  meest_enabled: boolean;
+  meest_default_service: string;
+  meest_default_weight: number;
+  meest_default_width: number;
+  meest_default_height: number;
+  meest_default_length: number;
+  meest_cod_handling: string;
+  default_courier: string;
   speedy_bg_username: string;
   speedy_bg_password: string;
   speedy_bg_api_key: string;
@@ -99,13 +107,22 @@ interface Settings {
   shipping_cost: number;
 }
 
+interface IntegrationField {
+  label: string;
+  type: string;
+  placeholder?: string;
+  value?: string;
+  key: string;
+  options?: { value: string; label: string }[];
+}
+
 interface IntegrationData {
   title: string;
   subtitle: string;
   icon: any;
   color: string;
   steps: { title: string; desc: string }[];
-  fields: { label: string; type: string; placeholder?: string; value?: string; key: string }[];
+  fields: IntegrationField[];
 }
 
 export default function SettingsPage() {
@@ -222,6 +239,14 @@ export default function SettingsPage() {
         meest_username: ws.meest_username || '',
         meest_password: ws.meest_password || '',
         meest_api_key: ws.meest_api_key || '',
+        meest_enabled: ws.meest_enabled || false,
+        meest_default_service: ws.meest_default_service || 'ECONOMIC_STANDARD',
+        meest_default_weight: parseFloat(ws.meest_default_weight) || 1.0,
+        meest_default_width: parseFloat(ws.meest_default_width) || 20.0,
+        meest_default_height: parseFloat(ws.meest_default_height) || 15.0,
+        meest_default_length: parseFloat(ws.meest_default_length) || 30.0,
+        meest_cod_handling: ws.meest_cod_handling || 'auto',
+        default_courier: ws.default_courier || 'geniki',
         speedy_bg_username: ws.speedy_bg_username || '',
         speedy_bg_password: ws.speedy_bg_password || '',
         speedy_bg_api_key: ws.speedy_bg_api_key || '',
@@ -283,7 +308,7 @@ export default function SettingsPage() {
         packeta: Boolean(ws.packeta_api_key && ws.packeta_api_secret),
         posta_romana: Boolean(ws.posta_romana_username && ws.posta_romana_password && ws.posta_romana_api_key),
         dhl_express: Boolean(ws.dhl_express_api_key && ws.dhl_express_api_secret && ws.dhl_express_account_number),
-        meest: Boolean(ws.meest_username && ws.meest_password && ws.meest_api_key),
+        meest: Boolean(ws.meest_username && ws.meest_password && ws.meest_enabled),
         speedy_bg: Boolean(ws.speedy_bg_username && ws.speedy_bg_password && ws.speedy_bg_api_key),
         nemo_express: Boolean(ws.nemo_express_username && ws.nemo_express_password && ws.nemo_express_api_key),
         allpacka: Boolean(ws.allpacka_username && ws.allpacka_password && ws.allpacka_api_key),
@@ -530,12 +555,27 @@ export default function SettingsPage() {
       steps: [
         { title: "Meest Account", desc: "Sign up or log in to your Meest business account." },
         { title: "API Access", desc: "Request API credentials from Meest customer support." },
-        { title: "Connect", desc: "Enter your username, password, and API key to integrate." }
+        { title: "Connect", desc: "Enter your username, password, and configure shipping defaults." }
       ],
       fields: [
         { label: "Username", type: "text", key: "meest_username" },
         { label: "Password", type: "password", key: "meest_password" },
-        { label: "API Key", type: "password", key: "meest_api_key" }
+        { label: "API Key (optional)", type: "password", key: "meest_api_key" },
+        { label: "Enable Integration", type: "checkbox", key: "meest_enabled" },
+        { label: "Default Service", type: "select", key: "meest_default_service", options: [
+          { value: "ECONOMIC_STANDARD", label: "Economic Standard" },
+          { value: "CARGO", label: "Cargo" },
+          { value: "COLLECT_BOX", label: "Collect Box" }
+        ]},
+        { label: "Default Weight (kg)", type: "number", placeholder: "1.0", key: "meest_default_weight" },
+        { label: "Default Width (cm)", type: "number", placeholder: "20", key: "meest_default_width" },
+        { label: "Default Height (cm)", type: "number", placeholder: "15", key: "meest_default_height" },
+        { label: "Default Length (cm)", type: "number", placeholder: "30", key: "meest_default_length" },
+        { label: "COD Handling", type: "select", key: "meest_cod_handling", options: [
+          { value: "auto", label: "Auto (detect from payment)" },
+          { value: "always", label: "Always COD" },
+          { value: "never", label: "Never COD" }
+        ]}
       ]
     },
     speedy_bg: {
@@ -967,6 +1007,20 @@ export default function SettingsPage() {
                   onChange={(e) => setSettings({ ...settings, shipping_cost: parseFloat(e.target.value) })}
                 />
               </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Default Courier</label>
+              <select
+                className="form-control"
+                value={settings.default_courier}
+                onChange={(e) => setSettings({ ...settings, default_courier: e.target.value })}
+              >
+                <option value="geniki">Geniki Taxydromiki</option>
+                <option value="meest">Meest</option>
+              </select>
+              <small style={{ color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+                All new vouchers will be created with this courier
+              </small>
             </div>
           </div>
         </div>
@@ -1448,6 +1502,40 @@ export default function SettingsPage() {
                     return null;
                   }
                   
+                  // Handle checkbox fields
+                  if (field.type === 'checkbox') {
+                    return (
+                      <div key={index} className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <input
+                          type="checkbox"
+                          id={field.key}
+                          checked={(settings as any)[field.key] || false}
+                          onChange={(e) => setSettings({ ...settings, [field.key]: e.target.checked })}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor={field.key} className="form-label" style={{ margin: 0, cursor: 'pointer' }}>{field.label}</label>
+                      </div>
+                    );
+                  }
+
+                  // Handle select fields
+                  if (field.type === 'select' && field.options) {
+                    return (
+                      <div key={index} className="form-group">
+                        <label className="form-label">{field.label}</label>
+                        <select
+                          className="form-control"
+                          value={(settings as any)[field.key] || ''}
+                          onChange={(e) => setSettings({ ...settings, [field.key]: e.target.value })}
+                        >
+                          {field.options.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+
                   // Regular field rendering
                   return (
                     <div key={index} className="form-group">

@@ -7,6 +7,21 @@ export interface Workspace {
   shopify_access_token: string | null;
   geniki_api_key: string | null;
   geniki_customer_code: string | null;
+  // Meest credentials
+  meest_username: string | null;
+  meest_password: string | null;
+  meest_api_key: string | null;
+  meest_enabled: boolean;
+  // Meest shipping defaults
+  meest_default_service: string | null;
+  meest_default_weight: number | null;
+  meest_default_width: number | null;
+  meest_default_height: number | null;
+  meest_default_length: number | null;
+  meest_cod_handling: string | null;
+  // Default courier
+  default_courier: string | null;
+  // Oblio credentials
   oblio_email: string | null;
   oblio_cif: string | null;
   oblio_secret: string | null;
@@ -106,6 +121,21 @@ export interface WorkspaceSettings {
   shopify_access_token: string | null;
   geniki_api_key: string | null;
   geniki_customer_code: string | null;
+  // Meest credentials
+  meest_username: string | null;
+  meest_password: string | null;
+  meest_api_key: string | null;
+  meest_enabled: boolean;
+  // Meest shipping defaults
+  meest_default_service: string | null;
+  meest_default_weight: number | null;
+  meest_default_width: number | null;
+  meest_default_height: number | null;
+  meest_default_length: number | null;
+  meest_cod_handling: string | null;
+  // Default courier
+  default_courier: string | null;
+  // Oblio credentials
   oblio_email: string | null;
   oblio_cif: string | null;
   oblio_secret: string | null;

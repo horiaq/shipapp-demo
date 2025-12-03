@@ -55,7 +55,7 @@ const CONFIG = {
   geniki: {
     wsdlUrl: process.env.GENIKI_WSDL || 'https://voucher.taxydromiki.gr/JobServicesV2.asmx?WSDL',
     username: process.env.GENIKI_USERNAME || 'closkin',
-    password: process.env.GENIKI_PASSWORD || 'csk$$149', 
+    password: process.env.GENIKI_PASSWORD || 'csk$$149',
     appKey: process.env.GENIKI_APPKEY || 'B7772667-0B6D-4FDA-8408-111D6D7F2989'
   },
   shopify: {
@@ -63,7 +63,17 @@ const CONFIG = {
     accessToken: process.env.SHOPIFY_ACCESS_TOKEN || '',
     webhookSecret: process.env.SHOPIFY_WEBHOOK_SECRET || '',
     apiVersion: '2025-01'
+  },
+  meest: {
+    production: 'https://mwl.meest.com/mwl',
+    staging: 'https://mwl-stage.meest.com/mwl'
   }
+};
+
+// Meest API configuration helper
+// Always use production since we have production credentials
+const getMeestBaseUrl = () => {
+  return CONFIG.meest.production;
 };
 
 // ============================================================================
@@ -133,6 +143,10 @@ pool.query('SELECT NOW()', (err, result) => {
 // Geniki SOAP client and auth cache (workspace-aware)
 const geinikiClientsByWorkspace = new Map();
 const authCacheByWorkspace = new Map();
+
+// Meest token cache (per workspace)
+const meestTokenCacheByWorkspace = new Map();
+const MEEST_TOKEN_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 
 // Clear auth cache for fresh start
 console.log('🔄 Clearing authentication cache for production start...');
@@ -718,12 +732,396 @@ function determineServices(orderData) {
 
 function calculateCOD(orderData) {
   // Check if payment is COD in any of these fields
-  if (orderData.financial_status === 'pending' || 
+  if (orderData.financial_status === 'pending' ||
       orderData.payment_status === 'cod' ||
       (orderData.payment_gateway_names && orderData.payment_gateway_names.includes('COD'))) {
     return parseFloat(orderData.total_price) || 0;
   }
   return 0;
+}
+
+// ==================== MEEST API FUNCTIONS ====================
+
+/**
+ * Authenticate with Meest API and get bearer token
+ * Tokens are cached per workspace and refreshed 5 minutes before expiry
+ */
+async function authenticateMeest(workspaceId, forceRefresh = false) {
+  const workspace = await getWorkspaceSettings(workspaceId);
+
+  if (!workspace.meest_username || !workspace.meest_password) {
+    throw new Error('Meest credentials not configured for this workspace');
+  }
+
+  const now = Date.now();
+  const cachedToken = meestTokenCacheByWorkspace.get(workspaceId);
+
+  // Return cached token if still valid
+  if (!forceRefresh && cachedToken && cachedToken.expiresAt > now + MEEST_TOKEN_BUFFER_MS) {
+    console.log(`Using cached Meest token for workspace ${workspaceId}`);
+    return cachedToken.token;
+  }
+
+  console.log(`🔑 Getting fresh Meest authentication token for workspace ${workspaceId}...`);
+
+  try {
+    const response = await axios.post(
+      `${getMeestBaseUrl()}/v2/api/auth`,
+      {
+        username: workspace.meest_username,
+        password: workspace.meest_password
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
+
+    const { access_token, expires_in } = response.data;
+
+    // Cache the token (default 12 hours if not specified)
+    const expiresAt = now + ((expires_in || 43200) * 1000);
+    meestTokenCacheByWorkspace.set(workspaceId, {
+      token: access_token,
+      expiresAt,
+      shopId: workspaceId
+    });
+
+    console.log(`✅ Meest authentication successful for workspace ${workspaceId}`);
+    return access_token;
+
+  } catch (error) {
+    console.error(`❌ Meest authentication failed:`, error.response?.data || error.message);
+    throw new Error(`Meest authentication failed: ${error.response?.data?.message || error.message}`);
+  }
+}
+
+/**
+ * Clear Meest token cache for a workspace (e.g., when credentials change)
+ */
+function clearMeestToken(workspaceId) {
+  meestTokenCacheByWorkspace.delete(workspaceId);
+  console.log(`Cleared Meest token cache for workspace ${workspaceId}`);
+}
+
+/**
+ * Generate a unique parcel number for Meest
+ */
+function generateMeestParcelNumber(orderName) {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const cleanOrderName = orderName.replace(/[^A-Z0-9]/gi, '').substring(0, 8).toUpperCase();
+  return `ET${cleanOrderName}${timestamp}`.substring(0, 20);
+}
+
+/**
+ * Build Meest parcel request from order data
+ */
+function buildMeestParcelRequest(orderData, workspaceSettings) {
+  // Determine COD based on settings
+  let isCOD = orderData.payment_status === 'cod' ||
+              orderData.financial_status === 'pending' ||
+              (orderData.payment_gateway_names && orderData.payment_gateway_names.includes('COD'));
+
+  const codHandling = workspaceSettings.meest_cod_handling || 'auto';
+  if (codHandling === 'always') {
+    isCOD = true;
+  } else if (codHandling === 'never') {
+    isCOD = false;
+  }
+
+  const weight = parseFloat(workspaceSettings.meest_default_weight) || 1.0;
+  const totalPrice = parseFloat(orderData.total_price) || 0;
+
+  // Build items array from order products
+  let items = [];
+  if (orderData.line_items && Array.isArray(orderData.line_items)) {
+    items = orderData.line_items.map(item => ({
+      description: {
+        description: item.name || 'Product'
+      },
+      logistic: {
+        quantity: item.quantity || 1,
+        weight: weight / orderData.line_items.length
+      },
+      value: {
+        value: parseFloat(item.price) || (totalPrice / orderData.line_items.length)
+      }
+    }));
+  }
+
+  // If no products, create a generic item
+  if (items.length === 0) {
+    items.push({
+      description: {
+        description: `Order ${orderData.order_name || orderData.order_number || orderData.name}`
+      },
+      logistic: {
+        quantity: 1,
+        weight: weight
+      },
+      value: {
+        value: totalPrice
+      }
+    });
+  }
+
+  // Support both nested shipping_address (Shopify format) and flat DB fields
+  const firstName = orderData.first_name || orderData.shipping_address?.first_name || 'Customer';
+  const lastName = orderData.last_name || orderData.shipping_address?.last_name || '';
+  const address1 = orderData.shipping_address1 || orderData.shipping_address?.address1 || '';
+  const city = orderData.shipping_city || orderData.shipping_address?.city || 'City';
+  const zip = orderData.shipping_zip || orderData.shipping_address?.zip || '00000';
+  const countryCode = orderData.shipping_country_code || orderData.shipping_address?.country_code || 'GR';
+  const phone = orderData.shipping_phone || orderData.shipping_address?.phone || orderData.customer?.phone || '';
+  const email = orderData.email || 'noreply@example.com';
+
+  // Extract building number from address if possible
+  const buildingMatch = address1.match(/\d+/);
+  const buildingNumber = buildingMatch ? buildingMatch[0] : '1';
+  const street = address1.replace(/^\d+\s*/, '').trim() || address1 || 'Address';
+
+  const request = {
+    parcelNumber: generateMeestParcelNumber(orderData.order_name || orderData.order_number || orderData.name),
+    serviceDetails: {
+      service: workspaceSettings.meest_default_service || 'ECONOMIC_STANDARD'
+    },
+    metrics: {
+      dimensions: {
+        width: parseFloat(workspaceSettings.meest_default_width) || 20,
+        height: parseFloat(workspaceSettings.meest_default_height) || 15,
+        length: parseFloat(workspaceSettings.meest_default_length) || 30
+      },
+      weight: weight
+    },
+    value: {
+      localTotalValue: totalPrice,
+      localCurrency: workspaceSettings.invoice_currency || 'EUR'
+    },
+    sender: {
+      name: workspaceSettings.workspace_name || 'Sender',
+      country: workspaceSettings.meest_sender_country || 'RO',
+      zipCode: workspaceSettings.meest_sender_zip || '077135',
+      city: workspaceSettings.meest_sender_city || 'Mogosoaia',
+      street: workspaceSettings.meest_sender_street || 'Islaz',
+      buildingNumber: workspaceSettings.meest_sender_building || '85',
+      phone: workspaceSettings.sender_phone || '+40700000000',
+      email: workspaceSettings.email || 'sender@example.com'
+    },
+    recipient: {
+      name: `${firstName} ${lastName}`.trim() || 'Customer',
+      country: countryCode,
+      zipCode: zip,
+      city: city,
+      street: street,
+      buildingNumber: buildingNumber,
+      phone: phone,
+      email: email
+    },
+    items: items,
+    logisticsOptions: {
+      labelFormat: 'PDF'
+    }
+  };
+
+  // Add COD if applicable
+  if (isCOD) {
+    request.cod = {
+      value: totalPrice,
+      currency: workspaceSettings.invoice_currency || 'EUR'
+    };
+  }
+
+  return request;
+}
+
+/**
+ * Create a new parcel/shipment with Meest
+ */
+async function createMeestParcel(orderData, workspaceId) {
+  const workspace = await getWorkspaceSettings(workspaceId);
+  const token = await authenticateMeest(workspaceId);
+
+  const parcelRequest = buildMeestParcelRequest(orderData, workspace);
+
+  console.log(`📦 Creating Meest parcel for order ${orderData.order_name || orderData.order_number || orderData.name}`);
+  console.log(`   Recipient: ${parcelRequest.recipient.name}, ${parcelRequest.recipient.city}, ${parcelRequest.recipient.country}`);
+  console.log(`   Service: ${parcelRequest.serviceDetails.service}`);
+
+  try {
+    const response = await axios.post(
+      `${getMeestBaseUrl()}/v2/api/parcels`,
+      parcelRequest,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 30000
+      }
+    );
+
+    const result = response.data;
+
+    console.log(`✅ Meest parcel created: ${result.parcelNumber || parcelRequest.parcelNumber}`);
+
+    return {
+      jobId: result.objectID || null,
+      voucherNumber: result.parcelNumber || parcelRequest.parcelNumber,
+      subVouchers: [],
+      meestResponse: result
+    };
+
+  } catch (error) {
+    console.error(`❌ Meest parcel creation failed:`, error.response?.data || error.message);
+    throw new Error(`Meest parcel creation failed: ${error.response?.data?.message || error.message}`);
+  }
+}
+
+/**
+ * Get shipping label for a Meest parcel (Base64 PDF)
+ */
+async function getMeestLabel(parcelNumber, workspaceId) {
+  const token = await authenticateMeest(workspaceId, true); // Force fresh token for PDF
+
+  console.log(`📄 Fetching Meest label for parcel: ${parcelNumber}`);
+
+  try {
+    const response = await axios.get(
+      `${getMeestBaseUrl()}/v2/api/labels/standard`,
+      {
+        params: { parcelNumber },
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 30000
+      }
+    );
+
+    console.log(`✅ Meest label fetched for parcel: ${parcelNumber}`);
+
+    // Return just the base64 string for compatibility with PDF download
+    return response.data.label;
+
+  } catch (error) {
+    console.error(`❌ Meest label fetch failed:`, error.response?.data || error.message);
+    throw new Error(`Meest label fetch failed: ${error.response?.data?.message || error.message}`);
+  }
+}
+
+/**
+ * Get tracking information for a Meest parcel
+ */
+async function trackMeestParcel(parcelNumber, workspaceId) {
+  const token = await authenticateMeest(workspaceId);
+
+  console.log(`📍 Tracking Meest parcel: ${parcelNumber}`);
+
+  try {
+    const response = await axios.get(
+      `${getMeestBaseUrl()}/v2/api/tracking`,
+      {
+        params: { parcelNumber },
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 15000
+      }
+    );
+
+    const tracking = response.data;
+
+    console.log(`✅ Meest tracking fetched: ${parcelNumber} - Status: ${tracking.status}`);
+
+    return {
+      voucherNumber: parcelNumber,
+      status: tracking.status,
+      statusCode: tracking.statusCode,
+      statusDate: tracking.statusDate,
+      currentLocation: tracking.currentLocation,
+      estimatedDelivery: tracking.estimatedDelivery,
+      isDelivered: normalizeMeestStatus(tracking.status) === 'delivered',
+      isReturned: normalizeMeestStatus(tracking.status) === 'returned',
+      events: tracking.events || []
+    };
+
+  } catch (error) {
+    console.error(`❌ Meest tracking failed:`, error.response?.data || error.message);
+    throw new Error(`Meest tracking failed: ${error.response?.data?.message || error.message}`);
+  }
+}
+
+/**
+ * Cancel a Meest parcel
+ */
+async function cancelMeestParcel(parcelNumber, workspaceId) {
+  const token = await authenticateMeest(workspaceId);
+
+  console.log(`🚫 Cancelling Meest parcel: ${parcelNumber}`);
+
+  try {
+    await axios.post(
+      `${getMeestBaseUrl()}/v2/api/parcels/cancel`,
+      { parcelNumber },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 15000
+      }
+    );
+
+    console.log(`✅ Meest parcel cancelled: ${parcelNumber}`);
+    return true;
+
+  } catch (error) {
+    console.error(`❌ Meest parcel cancellation failed:`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      url: `${getMeestBaseUrl()}/v2/api/parcels/cancel`
+    });
+    throw new Error(`Meest parcel cancellation failed: ${error.response?.data?.message || error.response?.statusText || error.message}`);
+  }
+}
+
+/**
+ * Normalize Meest status to internal status
+ */
+function normalizeMeestStatus(meestStatus) {
+  const status = (meestStatus || '').toUpperCase();
+
+  if (status.includes('DELIVERED') || status === 'DELIVERED') return 'delivered';
+  if (status.includes('RETURN') || status === 'RETURNED' || status === 'REFUSED') return 'returned';
+  if (status.includes('CANCEL') || status === 'CANCELLED') return 'cancelled';
+  if (status.includes('OUT_FOR') || status.includes('OUT FOR')) return 'in_transit';
+  if (status.includes('TRANSIT') || status.includes('IN_TRANSIT')) return 'in_transit';
+  if (status.includes('PICKED') || status.includes('PICKED_UP')) return 'in_transit';
+  if (status.includes('CREATED') || status === 'CREATED') return 'awb_created';
+
+  return 'in_transit';
+}
+
+/**
+ * Test Meest API connection
+ */
+async function testMeestConnection(workspaceId) {
+  try {
+    await authenticateMeest(workspaceId, true);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
 // ==================== SHOPIFY FUNCTIONS ====================
@@ -1327,22 +1725,22 @@ async function countOrders(workspaceId, statusFilter = null) {
   return parseInt(result.rows[0].total);
 }
 
-async function insertVoucher(orderName, voucherData, workspaceId, shopifyOrderId = null, shopifyFulfillmentId = null) {
+async function insertVoucher(orderName, voucherData, workspaceId, courierType = 'geniki', shopifyOrderId = null, shopifyFulfillmentId = null) {
   const query = `
-    INSERT INTO vouchers (workspace_id, order_name, voucher_number, job_id, shopify_order_id, shopify_fulfillment_id, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+    INSERT INTO vouchers (workspace_id, order_name, voucher_number, job_id, courier_type, shopify_order_id, shopify_fulfillment_id, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
     RETURNING id`;
-  
-  const values = [workspaceId, orderName, voucherData.voucherNumber, voucherData.jobId, shopifyOrderId, shopifyFulfillmentId];
+
+  const values = [workspaceId, orderName, voucherData.voucherNumber, voucherData.jobId, courierType, shopifyOrderId, shopifyFulfillmentId];
   const result = await pool.query(query, values);
-  
+
   // Also update the orders table to mark as processed
   const updateQuery = `
-    UPDATE orders 
+    UPDATE orders
     SET processed = TRUE
     WHERE order_name = $1 AND workspace_id = $2`;
   await pool.query(updateQuery, [orderName, workspaceId]);
-  
+
   return result.rows[0];
 }
 
@@ -2065,9 +2463,9 @@ app.post('/api/imported-orders/:orderId/voucher', async (req, res) => {
   try {
     const workspaceId = parseInt(req.body.workspaceId) || parseInt(req.headers['x-workspace-id']) || 1;
     console.log(`🎫 Creating voucher for order ${req.params.orderId} in workspace ${workspaceId}`);
-    
+
     const orderData = await getOrder(req.params.orderId, workspaceId);
-    
+
     if (!orderData) {
       console.log(`❌ Order ${req.params.orderId} not found in workspace ${workspaceId}`);
       return res.status(404).json({
@@ -2076,59 +2474,83 @@ app.post('/api/imported-orders/:orderId/voucher', async (req, res) => {
       });
     }
 
-    // Convert database order to Geniki format with proper data types and fallbacks
-    const geinikiOrder = {
-      order_number: orderData.order_name,
-      name: orderData.order_name,
-      email: orderData.email || '',
-      shipping_address: {
-        first_name: orderData.first_name || 'Customer',
-        last_name: orderData.last_name || '',
-        address1: orderData.shipping_address1 || '',
-        address2: orderData.shipping_address2 || '',
-        city: orderData.shipping_city || '',
-        zip: orderData.shipping_zip || '',
-        country_code: orderData.shipping_country_code || 'GR',
-        phone: orderData.shipping_phone || ''
-      },
-      customer: {
-        phone: orderData.shipping_phone || ''
-      },
-      line_items: orderData.products ? 
-        (typeof orderData.products === 'string' ? JSON.parse(orderData.products) : orderData.products).map(p => ({
-          grams: 500, // Default weight per item
-          quantity: p.quantity || 1,
-          name: p.name || 'Order Item'
-        })) 
-        : [{ grams: 500, quantity: 1, name: orderData.line_items || 'Order Item' }],
-      total_price: parseFloat(orderData.total_price) || 0,
-      note: orderData.notes || '',
-      financial_status: orderData.financial_status || 'pending',
-      payment_gateway_names: orderData.payment_method ? [orderData.payment_method] : ['COD'],
-      payment_status: orderData.payment_status || 'cod'
-    };
+    // Get workspace settings to determine default courier
+    const workspace = await getWorkspace(workspaceId);
+    const defaultCourier = workspace?.default_courier || 'geniki';
+    console.log(`📦 Using default courier: ${defaultCourier}`);
 
-    console.log('🔍 Transformed order data for Geniki:', JSON.stringify(geinikiOrder, null, 2));
+    let voucher;
+    let courierType;
 
-    // Create voucher with Geniki
-    const voucher = await createVoucher(geinikiOrder, workspaceId);
-    
-    // Save voucher to database
-    const savedVoucher = await insertVoucher(orderData.order_name, voucher, workspaceId);
-    
-    res.json({ 
+    if (defaultCourier === 'meest') {
+      // Check if Meest is enabled
+      if (!workspace.meest_enabled || !workspace.meest_username || !workspace.meest_password) {
+        throw new Error('Meest is not properly configured. Please check your Meest credentials in Settings.');
+      }
+
+      // Create voucher with Meest
+      console.log('🚀 Creating parcel with Meest...');
+      voucher = await createMeestParcel(orderData, workspaceId);
+      courierType = 'meest';
+      console.log(`✅ Meest parcel created: ${voucher.voucherNumber}`);
+
+    } else {
+      // Convert database order to Geniki format with proper data types and fallbacks
+      const geinikiOrder = {
+        order_number: orderData.order_name,
+        name: orderData.order_name,
+        email: orderData.email || '',
+        shipping_address: {
+          first_name: orderData.first_name || 'Customer',
+          last_name: orderData.last_name || '',
+          address1: orderData.shipping_address1 || '',
+          address2: orderData.shipping_address2 || '',
+          city: orderData.shipping_city || '',
+          zip: orderData.shipping_zip || '',
+          country_code: orderData.shipping_country_code || 'GR',
+          phone: orderData.shipping_phone || ''
+        },
+        customer: {
+          phone: orderData.shipping_phone || ''
+        },
+        line_items: orderData.products ?
+          (typeof orderData.products === 'string' ? JSON.parse(orderData.products) : orderData.products).map(p => ({
+            grams: 500, // Default weight per item
+            quantity: p.quantity || 1,
+            name: p.name || 'Order Item'
+          }))
+          : [{ grams: 500, quantity: 1, name: orderData.line_items || 'Order Item' }],
+        total_price: parseFloat(orderData.total_price) || 0,
+        note: orderData.notes || '',
+        financial_status: orderData.financial_status || 'pending',
+        payment_gateway_names: orderData.payment_method ? [orderData.payment_method] : ['COD'],
+        payment_status: orderData.payment_status || 'cod'
+      };
+
+      console.log('🔍 Transformed order data for Geniki:', JSON.stringify(geinikiOrder, null, 2));
+
+      // Create voucher with Geniki
+      voucher = await createVoucher(geinikiOrder, workspaceId);
+      courierType = 'geniki';
+    }
+
+    // Save voucher to database with courier type
+    const savedVoucher = await insertVoucher(orderData.order_name, voucher, workspaceId, courierType);
+
+    res.json({
       success: true,
-      message: `Voucher created successfully for ${orderData.order_name}`,
+      message: `Voucher created successfully for ${orderData.order_name} via ${courierType.toUpperCase()}`,
       voucher: {
         jobId: voucher.jobId,
         voucherNumber: voucher.voucherNumber,
+        courierType: courierType,
         downloadUrl: `/api/voucher/${voucher.voucherNumber}/pdf`
       }
     });
 
   } catch (error) {
     console.error('Error creating voucher for imported order:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       error: error.message
     });
@@ -2384,29 +2806,115 @@ app.post('/api/bulk-vouchers-from-csv', async (req, res) => {
 app.get('/api/voucher/:voucherNumber/pdf', async (req, res) => {
   try {
     // Try to get workspace ID from header, query param, or default to 1
-    const workspaceId = parseInt(req.headers['x-workspace-id']) || 
+    const workspaceId = parseInt(req.headers['x-workspace-id']) ||
                         parseInt(req.query.workspaceId) || 1;
-    
-    console.log(`📥 PDF Download request for voucher ${req.params.voucherNumber}, workspace ${workspaceId}`);
-    
-    const pdf = await getVoucherPdf(req.params.voucherNumber, workspaceId);
-    
+    const voucherNumber = req.params.voucherNumber;
+
+    console.log(`📥 PDF Download request for voucher ${voucherNumber}, workspace ${workspaceId}`);
+
+    // Get voucher from database to check courier type
+    const voucherResult = await pool.query(
+      'SELECT courier_type FROM vouchers WHERE voucher_number = $1 AND workspace_id = $2',
+      [voucherNumber, workspaceId]
+    );
+
+    const courierType = voucherResult.rows[0]?.courier_type || 'geniki';
+    console.log(`📦 Voucher courier type: ${courierType}`);
+
+    let pdf;
+
+    if (courierType === 'meest') {
+      // Get label from Meest (returns Base64)
+      console.log('🚀 Fetching Meest label...');
+      const base64Pdf = await getMeestLabel(voucherNumber, workspaceId);
+      pdf = Buffer.from(base64Pdf, 'base64');
+    } else {
+      // Get label from Geniki
+      pdf = await getVoucherPdf(voucherNumber, workspaceId);
+    }
+
     console.log(`✅ PDF ready: ${pdf.length} bytes`);
-    
+
     // Set proper headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=label-${req.params.voucherNumber}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=label-${voucherNumber}.pdf`);
     res.setHeader('Content-Length', pdf.length);
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-    
+
     res.send(pdf);
   } catch (error) {
     console.error('Error downloading PDF:', error);
     console.error(`[PDF Download] Failed for voucher ${req.params.voucherNumber}:`, error.message);
-    
+
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Cancel voucher/AWB
+app.delete('/api/voucher/:voucherNumber/cancel', async (req, res) => {
+  try {
+    const { voucherNumber } = req.params;
+    const workspaceId = parseInt(req.query.workspaceId) || parseInt(req.headers['x-workspace-id']) || 1;
+
+    console.log(`🚫 Cancel voucher request for ${voucherNumber}, workspace ${workspaceId}`);
+
+    // Get voucher from database to check courier type and job_id
+    const voucherResult = await pool.query(
+      'SELECT voucher_number, job_id, courier_type, order_name FROM vouchers WHERE voucher_number = $1 AND workspace_id = $2',
+      [voucherNumber, workspaceId]
+    );
+
+    if (voucherResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Voucher not found' });
+    }
+
+    const voucher = voucherResult.rows[0];
+    const courierType = voucher.courier_type || 'geniki';
+
+    console.log(`📦 Voucher courier type: ${courierType}`);
+
+    // Cancel at courier API
+    if (courierType === 'meest') {
+      await cancelMeestParcel(voucherNumber, workspaceId);
+    } else {
+      // Geniki uses job_id for cancellation
+      if (voucher.job_id) {
+        await cancelJob(voucher.job_id, workspaceId);
+      }
+    }
+
+    // Delete voucher from database
+    await pool.query(
+      'DELETE FROM vouchers WHERE voucher_number = $1 AND workspace_id = $2',
+      [voucherNumber, workspaceId]
+    );
+
+    // Update order to clear voucher info
+    if (voucher.order_name) {
+      await pool.query(`
+        UPDATE imported_orders
+        SET voucher_number = NULL,
+            voucher_created_at = NULL,
+            delivery_status = NULL,
+            delivery_status_updated_at = NULL,
+            processed = FALSE
+        WHERE order_name = $1 AND workspace_id = $2
+      `, [voucher.order_name, workspaceId]);
+    }
+
+    console.log(`✅ Voucher ${voucherNumber} cancelled and deleted successfully`);
+
+    res.json({
+      success: true,
+      message: `Voucher ${voucherNumber} cancelled successfully`,
+      courierType
+    });
+
+  } catch (error) {
+    console.error(`❌ Cancel voucher error for ${req.params.voucherNumber}:`, error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -4096,7 +4604,7 @@ app.get('/api/workspaces/:id/settings', authenticateUser, authorizeWorkspace, as
     const workspaceId = req.workspaceId; // From authorizeWorkspace middleware
     
     const result = await pool.query(
-      `SELECT 
+      `SELECT
         workspace_id,
         workspace_name,
         workspace_slug,
@@ -4109,6 +4617,20 @@ app.get('/api/workspaces/:id/settings', authenticateUser, authorizeWorkspace, as
         geniki_password,
         geniki_app_key,
         geniki_wsdl_url,
+        -- Meest credentials
+        meest_username,
+        meest_password,
+        meest_api_key,
+        meest_enabled,
+        -- Meest shipping defaults
+        meest_default_service,
+        meest_default_weight,
+        meest_default_width,
+        meest_default_height,
+        meest_default_length,
+        meest_cod_handling,
+        -- Default courier selection
+        default_courier,
         -- Oblio credentials
         oblio_email,
         oblio_cif,
@@ -4126,7 +4648,7 @@ app.get('/api/workspaces/:id/settings', authenticateUser, authorizeWorkspace, as
         is_active,
         created_at,
         updated_at
-      FROM workspaces 
+      FROM workspaces
       WHERE workspace_id = $1`,
       [workspaceId]
     );
@@ -4206,7 +4728,57 @@ app.put('/api/workspaces/:id/settings', authenticateUser, authorizeWorkspace, as
       updates.push(`geniki_wsdl_url = $${paramCount++}`);
       values.push(settings.geniki_wsdl_url);
     }
-    
+
+    // Meest credentials
+    if (settings.meest_username !== undefined) {
+      updates.push(`meest_username = $${paramCount++}`);
+      values.push(settings.meest_username);
+    }
+    if (settings.meest_password !== undefined) {
+      updates.push(`meest_password = $${paramCount++}`);
+      values.push(settings.meest_password);
+    }
+    if (settings.meest_api_key !== undefined) {
+      updates.push(`meest_api_key = $${paramCount++}`);
+      values.push(settings.meest_api_key);
+    }
+    if (settings.meest_enabled !== undefined) {
+      updates.push(`meest_enabled = $${paramCount++}`);
+      values.push(settings.meest_enabled);
+    }
+
+    // Meest shipping defaults
+    if (settings.meest_default_service !== undefined) {
+      updates.push(`meest_default_service = $${paramCount++}`);
+      values.push(settings.meest_default_service);
+    }
+    if (settings.meest_default_weight !== undefined) {
+      updates.push(`meest_default_weight = $${paramCount++}`);
+      values.push(parseFloat(settings.meest_default_weight));
+    }
+    if (settings.meest_default_width !== undefined) {
+      updates.push(`meest_default_width = $${paramCount++}`);
+      values.push(parseFloat(settings.meest_default_width));
+    }
+    if (settings.meest_default_height !== undefined) {
+      updates.push(`meest_default_height = $${paramCount++}`);
+      values.push(parseFloat(settings.meest_default_height));
+    }
+    if (settings.meest_default_length !== undefined) {
+      updates.push(`meest_default_length = $${paramCount++}`);
+      values.push(parseFloat(settings.meest_default_length));
+    }
+    if (settings.meest_cod_handling !== undefined) {
+      updates.push(`meest_cod_handling = $${paramCount++}`);
+      values.push(settings.meest_cod_handling);
+    }
+
+    // Default courier selection
+    if (settings.default_courier !== undefined) {
+      updates.push(`default_courier = $${paramCount++}`);
+      values.push(settings.default_courier);
+    }
+
     // Oblio credentials
     if (settings.oblio_email !== undefined) {
       updates.push(`oblio_email = $${paramCount++}`);
@@ -4399,6 +4971,33 @@ app.post('/api/workspaces/:id/test-oblio', async (req, res) => {
     res.status(400).json({
       success: false,
       error: error.response?.data?.statusMessage || error.message
+    });
+  }
+});
+
+// Test Meest connection
+app.post('/api/workspaces/:id/test-meest', async (req, res) => {
+  try {
+    const workspaceId = parseInt(req.params.id);
+    console.log(`🧪 Testing Meest connection for workspace ${workspaceId}`);
+
+    const result = await testMeestConnection(workspaceId);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Meest connection successful',
+        details: result.details
+      });
+    } else {
+      throw new Error(result.error);
+    }
+
+  } catch (error) {
+    console.error('Meest connection test failed:', error);
+    res.status(400).json({
+      success: false,
+      error: error.message
     });
   }
 });
