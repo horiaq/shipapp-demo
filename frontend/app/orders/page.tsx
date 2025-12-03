@@ -334,21 +334,30 @@ export default function OrdersPage() {
   };
 
   const handleCreateLabels = async () => {
-    if (selectedOrders.length === 0 || !currentWorkspace) return;
+    if (selectedOrders.length === 0 || !currentWorkspace) {
+      window.alert('No orders selected');
+      return;
+    }
 
-    const confirmed = confirm(
-      `Create AWB labels for ${selectedOrders.length} selected orders?\n\n` +
-      `This will use your default courier (${currentWorkspace.default_courier || 'geniki'}).`
-    );
-
-    if (!confirmed) return;
+    const wsId = currentWorkspace.workspace_id;
+    const courier = currentWorkspace.default_courier || 'geniki';
 
     try {
-      const result = await bulkCreateVouchers(selectedOrders, currentWorkspace.workspace_id);
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/bulk-create-vouchers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+          'X-Workspace-Id': wsId.toString(),
+        },
+        body: JSON.stringify({ orderIds: selectedOrders, workspaceId: wsId }),
+      });
+
+      const result = await response.json();
 
       if (result.success) {
-        const data = result as any;
-        const results = data.results || { success: [], skipped: [], failed: [] };
+        const results = result.results || { success: [], skipped: [], failed: [] };
         let message = `Label Creation Complete!\n\n`;
         message += `✅ Created: ${results.success?.length || 0}\n`;
         message += `⏭️ Skipped (already have labels): ${results.skipped?.length || 0}\n`;
@@ -364,15 +373,14 @@ export default function OrdersPage() {
           }
         }
 
-        alert(message);
+        window.alert(message);
         setSelectedOrders([]);
         await mutate();
       } else {
-        const data = result as any;
-        alert(`Error: ${data.error || 'Failed to create labels'}`);
+        window.alert(`Error: ${result.error || 'Failed to create labels'}`);
       }
     } catch (error: any) {
-      alert(`Error creating labels: ${error.message || 'Unknown error'}`);
+      window.alert(`Error creating labels: ${error.message || 'Unknown error'}`);
     }
   };
 
