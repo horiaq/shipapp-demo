@@ -2931,7 +2931,7 @@ app.delete('/api/voucher/:voucherNumber/cancel', async (req, res) => {
     // Update order to clear voucher info
     if (voucher.order_name) {
       await pool.query(`
-        UPDATE imported_orders
+        UPDATE orders
         SET voucher_number = NULL,
             voucher_created_at = NULL,
             delivery_status = NULL,
