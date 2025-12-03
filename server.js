@@ -2887,14 +2887,28 @@ app.delete('/api/voucher/:voucherNumber/cancel', async (req, res) => {
 
     console.log(`📦 Voucher courier type: ${courierType}`);
 
-    // Cancel at courier API
-    if (courierType === 'meest') {
-      await cancelMeestParcel(voucherNumber, workspaceId);
-    } else {
-      // Geniki uses job_id for cancellation
-      if (voucher.job_id) {
-        await cancelJob(voucher.job_id, workspaceId);
+    // Try to cancel at courier API, but continue even if it fails
+    let apiCancelSuccess = false;
+    let apiCancelError = null;
+
+    try {
+      if (courierType === 'meest') {
+        await cancelMeestParcel(voucherNumber, workspaceId);
+        apiCancelSuccess = true;
+      } else {
+        // Geniki uses job_id for cancellation
+        if (voucher.job_id) {
+          await cancelJob(voucher.job_id, workspaceId);
+          apiCancelSuccess = true;
+        } else {
+          console.log('⚠️ No job_id found, skipping courier API cancellation');
+          apiCancelSuccess = true; // No job to cancel
+        }
       }
+    } catch (apiError) {
+      console.warn(`⚠️ Courier API cancellation failed: ${apiError.message}`);
+      apiCancelError = apiError.message;
+      // Continue anyway - we'll still delete from database so user can recreate
     }
 
     // Delete voucher from database
@@ -2916,12 +2930,16 @@ app.delete('/api/voucher/:voucherNumber/cancel', async (req, res) => {
       `, [voucher.order_name, workspaceId]);
     }
 
-    console.log(`✅ Voucher ${voucherNumber} cancelled and deleted successfully`);
+    console.log(`✅ Voucher ${voucherNumber} deleted from database${apiCancelSuccess ? ' and cancelled at courier' : ' (courier API cancellation failed)'}`);
 
     res.json({
       success: true,
-      message: `Voucher ${voucherNumber} cancelled successfully`,
-      courierType
+      message: apiCancelError
+        ? `AWB deleted from database. Courier API cancellation failed: ${apiCancelError}`
+        : `AWB ${voucherNumber} cancelled successfully`,
+      courierType,
+      apiCancelSuccess,
+      apiCancelError
     });
 
   } catch (error) {
