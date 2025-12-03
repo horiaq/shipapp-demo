@@ -6,7 +6,7 @@ import { Order } from '@/lib/types';
 import { getOrderStatus, formatPrice, getPaymentMethod, canCreateInvoice, canFulfill } from '@/lib/utils/orderHelpers';
 import { fulfillOrder, trackOrder, syncOrderStatus, createInvoice, createVoucher, cancelVoucher } from '@/lib/api/orders';
 import { useWorkspace } from '@/lib/contexts/WorkspaceContext';
-import { CreditCard, DollarSign, FileText, Truck, RefreshCw, FilePlus, CheckCircle, Eye, Filter, ChevronDown, Edit2, Trash2, Copy, Check } from 'react-feather';
+import { CreditCard, DollarSign, FileText, Truck, RefreshCw, FilePlus, CheckCircle, Eye, Filter, ChevronDown, Edit2, Trash2, Copy, Check, X } from 'react-feather';
 import CustomTooltip from './CustomTooltip';
 import OrderDetailsModal from './OrderDetailsModal';
 
@@ -45,6 +45,7 @@ export default function OrdersTable({
   const [mounted, setMounted] = useState(false);
   const leaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [lastCheckedIndex, setLastCheckedIndex] = useState<number | null>(null);
+  const [deletingVoucher, setDeletingVoucher] = useState<string | null>(null);
 
   React.useEffect(() => {
     setMounted(true);
@@ -166,6 +167,31 @@ export default function OrdersTable({
       setTimeout(() => {
         setCopiedVoucher(null);
       }, 2000);
+    }
+  };
+
+  const handleDeleteVoucher = async (voucherNumber: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!currentWorkspace) return;
+
+    const confirmed = window.confirm(`Are you sure you want to delete AWB ${voucherNumber}? This will allow you to recreate it.`);
+    if (!confirmed) return;
+
+    setDeletingVoucher(voucherNumber);
+    try {
+      const result = await cancelVoucher(voucherNumber, currentWorkspace.workspace_id);
+      if (result.success) {
+        setHoveredVoucher(null);
+        onRefresh();
+      } else {
+        alert(`Error: ${result.message || 'Failed to delete AWB'}`);
+      }
+    } catch (error: any) {
+      alert(`Error: ${error.message || 'Failed to delete AWB'}`);
+    } finally {
+      setDeletingVoucher(null);
     }
   };
 
@@ -681,7 +707,7 @@ export default function OrdersTable({
       onOrderUpdated={onRefresh}
     />
 
-    {/* Voucher Copy Tooltip */}
+    {/* Voucher Tooltip with Copy and Delete */}
     {hoveredVoucher && mounted && createPortal(
       <div
         className={`voucher-tooltip ${showTooltip ? 'show' : ''} ${copiedVoucher === hoveredVoucher ? 'copied' : ''}`}
@@ -700,7 +726,6 @@ export default function OrdersTable({
             }
           }, 100);
         }}
-        onClick={(e) => handleCopyVoucher(hoveredVoucher, e)}
       >
         <div className="tooltip-content-wrapper">
           {copiedVoucher === hoveredVoucher ? (
@@ -710,8 +735,34 @@ export default function OrdersTable({
             </>
           ) : (
             <>
-              <span className="tooltip-text">AWB: {hoveredVoucher}</span>
-              <Copy size={14} className="tooltip-icon" />
+              <span
+                className="tooltip-text tooltip-copy-area"
+                onClick={(e) => handleCopyVoucher(hoveredVoucher, e)}
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              >
+                AWB: {hoveredVoucher}
+                <Copy size={12} className="tooltip-icon" />
+              </span>
+              <div
+                className="tooltip-delete-btn"
+                onClick={(e) => handleDeleteVoucher(hoveredVoucher, e)}
+                style={{
+                  marginLeft: '0.5rem',
+                  padding: '0.25rem',
+                  borderRadius: '4px',
+                  cursor: deletingVoucher === hoveredVoucher ? 'wait' : 'pointer',
+                  opacity: deletingVoucher === hoveredVoucher ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  transition: 'all 0.2s ease',
+                }}
+                title="Delete AWB"
+              >
+                <X size={14} style={{ color: '#ef4444' }} />
+              </div>
             </>
           )}
         </div>
