@@ -4860,8 +4860,10 @@ app.put('/api/workspaces/:id/settings', authenticateUser, authorizeWorkspace, as
       });
     }
     
-    // Clear workspace settings cache
-    workspaceCache.delete(workspaceId);
+    // Clear Meest token cache if credentials changed
+    if (meest_username || meest_password) {
+      meestTokenCacheByWorkspace.delete(workspaceId);
+    }
     
     console.log(`✅ Updated workspace ${workspaceId} settings`);
     
