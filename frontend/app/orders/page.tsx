@@ -347,7 +347,8 @@ export default function OrdersPage() {
       const result = await bulkCreateVouchers(selectedOrders, currentWorkspace.workspace_id);
 
       if (result.success) {
-        const { results } = result;
+        const data = result as any;
+        const results = data.results || { success: [], skipped: [], failed: [] };
         let message = `Label Creation Complete!\n\n`;
         message += `✅ Created: ${results.success?.length || 0}\n`;
         message += `⏭️ Skipped (already have labels): ${results.skipped?.length || 0}\n`;
@@ -367,7 +368,8 @@ export default function OrdersPage() {
         setSelectedOrders([]);
         await mutate();
       } else {
-        alert(`Error: ${result.error || 'Failed to create labels'}`);
+        const data = result as any;
+        alert(`Error: ${data.error || 'Failed to create labels'}`);
       }
     } catch (error: any) {
       alert(`Error creating labels: ${error.message || 'Unknown error'}`);
