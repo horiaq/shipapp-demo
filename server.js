@@ -978,12 +978,12 @@ async function createMeestParcel(orderData, workspaceId) {
     if (!labelData) {
       console.log(`📄 Label not in response, fetching separately for: ${parcelNumber}`);
 
-      // Retry up to 3 times with increasing delay (Meest needs time to process)
-      for (let attempt = 1; attempt <= 3; attempt++) {
+      // Retry up to 5 times with longer delays (Meest needs time to process parcels)
+      // Delays: 5s, 10s, 15s, 20s, 25s = 75s total max wait
+      for (let attempt = 1; attempt <= 5; attempt++) {
         try {
-          // Wait before fetching (1s, 2s, 3s)
-          const delay = attempt * 1000;
-          console.log(`   Attempt ${attempt}/3, waiting ${delay}ms...`);
+          const delay = attempt * 5000; // 5s, 10s, 15s, 20s, 25s
+          console.log(`   Attempt ${attempt}/5, waiting ${delay/1000}s...`);
           await new Promise(r => setTimeout(r, delay));
 
           labelData = await getMeestLabel(parcelNumber, workspaceId);
@@ -991,8 +991,8 @@ async function createMeestParcel(orderData, workspaceId) {
           break; // Success, exit loop
         } catch (labelError) {
           console.warn(`⚠️ Attempt ${attempt} failed for ${parcelNumber}: ${labelError.message}`);
-          if (attempt === 3) {
-            console.warn(`⚠️ All attempts failed for ${parcelNumber} - label will be fetched on download`);
+          if (attempt === 5) {
+            console.warn(`⚠️ All 5 attempts failed for ${parcelNumber} - label will be fetched on download`);
           }
         }
       }
@@ -2979,13 +2979,45 @@ app.get('/api/voucher/:voucherNumber/pdf', async (req, res) => {
     let pdf;
 
     if (courierType === 'meest') {
-      // Use stored label if available, otherwise try to fetch from Meest API
+      // Use stored label if available, otherwise try to fetch from Meest API with retry
       if (storedLabelData) {
         console.log('📄 Using stored Meest label...');
         pdf = Buffer.from(storedLabelData, 'base64');
       } else {
-        console.log('🚀 Fetching Meest label from API...');
-        const base64Pdf = await getMeestLabel(voucherNumber, workspaceId);
+        console.log('🚀 Fetching Meest label from API with retry...');
+        let base64Pdf = null;
+
+        // Retry up to 3 times with longer delays for on-demand fetch
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            if (attempt > 1) {
+              const delay = attempt * 5000; // 10s, 15s
+              console.log(`   Retry ${attempt}/3, waiting ${delay/1000}s...`);
+              await new Promise(r => setTimeout(r, delay));
+            }
+            base64Pdf = await getMeestLabel(voucherNumber, workspaceId);
+            console.log(`✅ Fetched Meest label on attempt ${attempt}`);
+
+            // Save to database for future use
+            try {
+              await pool.query(
+                'UPDATE vouchers SET label_data = $1 WHERE voucher_number = $2 AND workspace_id = $3',
+                [base64Pdf, voucherNumber, workspaceId]
+              );
+              console.log('💾 Saved label to database');
+            } catch (saveErr) {
+              console.warn('⚠️ Failed to save label to DB:', saveErr.message);
+            }
+
+            break;
+          } catch (fetchErr) {
+            console.warn(`⚠️ Attempt ${attempt} failed: ${fetchErr.message}`);
+            if (attempt === 3) {
+              throw fetchErr;
+            }
+          }
+        }
+
         pdf = Buffer.from(base64Pdf, 'base64');
       }
     } else {
