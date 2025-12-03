@@ -652,29 +652,39 @@ export default function OrdersTable({
                           onClick={async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            console.log('DELETE CLICKED for:', order.voucherNumber, 'workspace:', currentWorkspace?.workspace_id);
 
                             if (!currentWorkspace) {
-                              alert('No workspace selected');
+                              window.alert('No workspace selected');
                               return;
                             }
 
-                            const confirmed = window.confirm(`Delete AWB ${order.voucherNumber}?\nThis will allow you to create a new one.`);
-                            if (!confirmed) return;
+                            const voucherNum = order.voucherNumber;
+                            const wsId = currentWorkspace.workspace_id;
 
+                            // Direct deletion without confirm - user clicked the X button
                             try {
-                              console.log('Calling cancelVoucher API...');
-                              const result = await cancelVoucher(order.voucherNumber!, currentWorkspace.workspace_id);
-                              console.log('API result:', result);
+                              const apiUrl = `/api/voucher/${encodeURIComponent(voucherNum!)}/cancel?workspaceId=${wsId}`;
+                              const token = localStorage.getItem('auth_token');
+
+                              const response = await fetch(apiUrl, {
+                                method: 'DELETE',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': token ? `Bearer ${token}` : '',
+                                  'X-Workspace-Id': wsId.toString(),
+                                },
+                              });
+
+                              const result = await response.json();
+
                               if (result.success) {
-                                alert('AWB deleted successfully!');
+                                window.alert('AWB deleted! Refreshing...');
                                 onRefresh();
                               } else {
-                                alert(`Error: ${result.message || 'Failed to delete AWB'}`);
+                                window.alert('Delete failed: ' + (result.message || result.error || 'Unknown error'));
                               }
                             } catch (error: any) {
-                              console.error('Delete error:', error);
-                              alert(`Error: ${error.message || 'Failed to delete AWB'}`);
+                              window.alert('Delete error: ' + error.message);
                             }
                           }}
                           style={{
