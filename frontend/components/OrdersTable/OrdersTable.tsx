@@ -601,48 +601,82 @@ export default function OrdersTable({
 
                     {/* Voucher Badge */}
                     {order.voucherNumber ? (
-                      <div
-                        key={`doc-voucher-${order.orderName}`}
-                        className="doc-badge doc-shipping voucher-with-copy"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (!currentWorkspace) return;
-                          
-                          try {
-                            // Force download using fetch and blob
-                            const url = `/api/voucher/${order.voucherNumber}/pdf?workspaceId=${currentWorkspace.workspace_id}`;
-                            const response = await fetch(url);
-                            
-                            if (!response.ok) {
-                              throw new Error('Download failed');
+                      <>
+                        <div
+                          key={`doc-voucher-${order.orderName}`}
+                          className="doc-badge doc-shipping voucher-with-copy"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!currentWorkspace) return;
+
+                            try {
+                              // Force download using fetch and blob
+                              const url = `/api/voucher/${order.voucherNumber}/pdf?workspaceId=${currentWorkspace.workspace_id}`;
+                              const response = await fetch(url);
+
+                              if (!response.ok) {
+                                throw new Error('Download failed');
+                              }
+
+                              const blob = await response.blob();
+                              const blobUrl = URL.createObjectURL(blob);
+
+                              // Create temporary link and trigger download
+                              const link = document.createElement('a');
+                              link.href = blobUrl;
+                              link.download = `label-${order.voucherNumber}.pdf`;
+                              link.style.display = 'none';
+                              document.body.appendChild(link);
+                              link.click();
+
+                              // Cleanup
+                              setTimeout(() => {
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(blobUrl);
+                              }, 100);
+                            } catch (error: any) {
+                              alert(`Error: ${error.message}`);
                             }
-                            
-                            const blob = await response.blob();
-                            const blobUrl = URL.createObjectURL(blob);
-                            
-                            // Create temporary link and trigger download
-                            const link = document.createElement('a');
-                            link.href = blobUrl;
-                            link.download = `label-${order.voucherNumber}.pdf`;
-                            link.style.display = 'none';
-                            document.body.appendChild(link);
-                            link.click();
-                            
-                            // Cleanup
-                            setTimeout(() => {
-                              document.body.removeChild(link);
-                              URL.revokeObjectURL(blobUrl);
-                            }, 100);
-                          } catch (error: any) {
-                            alert(`Error: ${error.message}`);
-                          }
-                        }}
-                        onMouseEnter={(e) => handleVoucherMouseEnter(order.voucherNumber!, e)}
-                        onMouseLeave={handleVoucherMouseLeave}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <Truck size={14} />
-                      </div>
+                          }}
+                          onMouseEnter={(e) => handleVoucherMouseEnter(order.voucherNumber!, e)}
+                          onMouseLeave={handleVoucherMouseLeave}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <Truck size={14} />
+                        </div>
+                        {/* Delete AWB Button */}
+                        <div
+                          key={`doc-voucher-delete-${order.orderName}`}
+                          className="doc-badge"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!currentWorkspace) return;
+
+                            const confirmed = window.confirm(`Delete AWB ${order.voucherNumber}?\nThis will allow you to create a new one.`);
+                            if (!confirmed) return;
+
+                            try {
+                              const result = await cancelVoucher(order.voucherNumber!, currentWorkspace.workspace_id);
+                              if (result.success) {
+                                onRefresh();
+                              } else {
+                                alert(`Error: ${result.message || 'Failed to delete AWB'}`);
+                              }
+                            } catch (error: any) {
+                              alert(`Error: ${error.message || 'Failed to delete AWB'}`);
+                            }
+                          }}
+                          style={{
+                            cursor: 'pointer',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#ef4444'
+                          }}
+                          title="Delete AWB"
+                        >
+                          <X size={14} />
+                        </div>
+                      </>
                     ) : status === 'Unfulfilled' ? (
                       <div
                         key={`doc-voucher-create-${order.orderName}`}
