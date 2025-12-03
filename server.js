@@ -966,16 +966,31 @@ async function createMeestParcel(orderData, workspaceId) {
     );
 
     const result = response.data;
+    const parcelNumber = result.parcelNumber || parcelRequest.parcelNumber;
 
-    console.log(`✅ Meest parcel created: ${result.parcelNumber || parcelRequest.parcelNumber}`);
+    console.log(`✅ Meest parcel created: ${parcelNumber}`);
 
     // Get label from response (lastMileLabel or firstMileLabel)
-    const labelData = result.lastMileLabel || result.firstMileLabel || null;
+    let labelData = result.lastMileLabel || result.firstMileLabel || null;
     const trackingNumber = result.lastMileTrackingNumber || result.firstMileTrackingNUmber || null;
+
+    // If label not in response, fetch it separately
+    if (!labelData) {
+      console.log(`📄 Label not in response, fetching separately for: ${parcelNumber}`);
+      try {
+        labelData = await getMeestLabel(parcelNumber, workspaceId);
+        console.log(`✅ Fetched label for ${parcelNumber}, size: ${labelData?.length || 0} chars`);
+      } catch (labelError) {
+        console.warn(`⚠️ Could not fetch label for ${parcelNumber}: ${labelError.message}`);
+        // Continue without label - user can download later
+      }
+    } else {
+      console.log(`✅ Label included in response for ${parcelNumber}, size: ${labelData.length} chars`);
+    }
 
     return {
       jobId: result.objectID || null,
-      voucherNumber: result.parcelNumber || parcelRequest.parcelNumber,
+      voucherNumber: parcelNumber,
       subVouchers: [],
       meestResponse: result,
       labelData: labelData,
