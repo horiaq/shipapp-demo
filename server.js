@@ -12,6 +12,7 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
+const { PDFDocument } = require('pdf-lib');
 
 // Load environment variables
 dotenv.config();
@@ -3140,19 +3141,43 @@ app.post('/api/export-labels', authenticateUser, authorizeWorkspace, async (req,
       });
     }
 
-    // Merge all PDFs or return single one
+    // Merge all PDFs using pdf-lib
     let pdfBuffer;
     if (pdfBuffers.length === 1) {
       pdfBuffer = pdfBuffers[0];
     } else {
-      // For now, just concatenate - in production you'd use pdf-lib or similar to properly merge
-      // Since Meest and Geniki labels are separate documents, concatenation may cause issues
-      // For now, prioritize returning what we have
-      pdfBuffer = pdfBuffers[0]; // Return first PDF, TODO: implement proper PDF merging
-      console.log(`⚠️ Multiple PDF sources found, returning first. Consider implementing PDF merge.`);
+      console.log(`📎 Merging ${pdfBuffers.length} PDFs...`);
+      try {
+        // Create a new PDF document
+        const mergedPdf = await PDFDocument.create();
+
+        for (let i = 0; i < pdfBuffers.length; i++) {
+          try {
+            // Load each PDF
+            const pdfDoc = await PDFDocument.load(pdfBuffers[i]);
+            // Copy all pages from this PDF
+            const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+            // Add each page to the merged document
+            pages.forEach(page => mergedPdf.addPage(page));
+            console.log(`  ✅ Added PDF ${i + 1} (${pdfDoc.getPageCount()} pages)`);
+          } catch (pdfError) {
+            console.warn(`  ⚠️ Failed to load PDF ${i + 1}: ${pdfError.message}`);
+          }
+        }
+
+        // Save the merged PDF
+        const mergedPdfBytes = await mergedPdf.save();
+        pdfBuffer = Buffer.from(mergedPdfBytes);
+        console.log(`📎 Merged PDF: ${mergedPdf.getPageCount()} total pages, ${pdfBuffer.length} bytes`);
+      } catch (mergeError) {
+        console.error('❌ PDF merge failed:', mergeError.message);
+        // Fall back to first PDF if merge fails
+        pdfBuffer = pdfBuffers[0];
+        console.log('⚠️ Falling back to first PDF');
+      }
     }
-    
-    console.log(`✅ Successfully exported ${vouchers.length} labels in one PDF (${pdfBuffer.length} bytes)`);
+
+    console.log(`✅ Successfully exported ${vouchers.length} labels (${pdfBuffer.length} bytes)`);
     
     // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
