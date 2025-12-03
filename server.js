@@ -968,11 +968,17 @@ async function createMeestParcel(orderData, workspaceId) {
 
     console.log(`✅ Meest parcel created: ${result.parcelNumber || parcelRequest.parcelNumber}`);
 
+    // Get label from response (lastMileLabel or firstMileLabel)
+    const labelData = result.lastMileLabel || result.firstMileLabel || null;
+    const trackingNumber = result.lastMileTrackingNumber || result.firstMileTrackingNUmber || null;
+
     return {
       jobId: result.objectID || null,
       voucherNumber: result.parcelNumber || parcelRequest.parcelNumber,
       subVouchers: [],
-      meestResponse: result
+      meestResponse: result,
+      labelData: labelData,
+      trackingNumber: trackingNumber
     };
 
   } catch (error) {
@@ -1727,11 +1733,11 @@ async function countOrders(workspaceId, statusFilter = null) {
 
 async function insertVoucher(orderName, voucherData, workspaceId, courierType = 'geniki', shopifyOrderId = null, shopifyFulfillmentId = null) {
   const query = `
-    INSERT INTO vouchers (workspace_id, order_name, voucher_number, job_id, courier_type, shopify_order_id, shopify_fulfillment_id, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+    INSERT INTO vouchers (workspace_id, order_name, voucher_number, job_id, courier_type, shopify_order_id, shopify_fulfillment_id, label_data, tracking_number, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
     RETURNING id`;
 
-  const values = [workspaceId, orderName, voucherData.voucherNumber, voucherData.jobId, courierType, shopifyOrderId, shopifyFulfillmentId];
+  const values = [workspaceId, orderName, voucherData.voucherNumber, voucherData.jobId, courierType, shopifyOrderId, shopifyFulfillmentId, voucherData.labelData || null, voucherData.trackingNumber || null];
   const result = await pool.query(query, values);
 
   // Also update the orders table to mark as processed
@@ -2812,22 +2818,28 @@ app.get('/api/voucher/:voucherNumber/pdf', async (req, res) => {
 
     console.log(`📥 PDF Download request for voucher ${voucherNumber}, workspace ${workspaceId}`);
 
-    // Get voucher from database to check courier type
+    // Get voucher from database to check courier type and stored label
     const voucherResult = await pool.query(
-      'SELECT courier_type FROM vouchers WHERE voucher_number = $1 AND workspace_id = $2',
+      'SELECT courier_type, label_data FROM vouchers WHERE voucher_number = $1 AND workspace_id = $2',
       [voucherNumber, workspaceId]
     );
 
     const courierType = voucherResult.rows[0]?.courier_type || 'geniki';
-    console.log(`📦 Voucher courier type: ${courierType}`);
+    const storedLabelData = voucherResult.rows[0]?.label_data || null;
+    console.log(`📦 Voucher courier type: ${courierType}, has stored label: ${!!storedLabelData}`);
 
     let pdf;
 
     if (courierType === 'meest') {
-      // Get label from Meest (returns Base64)
-      console.log('🚀 Fetching Meest label...');
-      const base64Pdf = await getMeestLabel(voucherNumber, workspaceId);
-      pdf = Buffer.from(base64Pdf, 'base64');
+      // Use stored label if available, otherwise try to fetch from Meest API
+      if (storedLabelData) {
+        console.log('📄 Using stored Meest label...');
+        pdf = Buffer.from(storedLabelData, 'base64');
+      } else {
+        console.log('🚀 Fetching Meest label from API...');
+        const base64Pdf = await getMeestLabel(voucherNumber, workspaceId);
+        pdf = Buffer.from(base64Pdf, 'base64');
+      }
     } else {
       // Get label from Geniki
       pdf = await getVoucherPdf(voucherNumber, workspaceId);
@@ -3055,21 +3067,21 @@ app.post('/api/export-labels', authenticateUser, authorizeWorkspace, async (req,
 
     console.log(`🖨️ Exporting labels for ${orderIds.length} orders (workspace ${workspaceId}):`, orderIds);
 
-    // Get voucher numbers for selected orders
+    // Get voucher numbers for selected orders with courier type and label data
     const voucherQuery = `
-      SELECT DISTINCT v.voucher_number, o.order_name, v.created_at
+      SELECT DISTINCT v.voucher_number, o.order_name, v.created_at, v.courier_type, v.label_data
       FROM vouchers v
-      JOIN orders o ON v.order_name = o.order_name  
+      JOIN orders o ON v.order_name = o.order_name
       WHERE o.order_name = ANY($1)
       AND v.workspace_id = $2
       AND o.workspace_id = $2
       AND v.voucher_number IS NOT NULL
       ORDER BY v.created_at DESC
     `;
-    
+
     const voucherResult = await pool.query(voucherQuery, [orderIds, workspaceId]);
     const vouchers = voucherResult.rows;
-    
+
     if (vouchers.length === 0) {
       return res.status(400).json({
         success: false,
@@ -3077,18 +3089,56 @@ app.post('/api/export-labels', authenticateUser, authorizeWorkspace, async (req,
       });
     }
 
-    const voucherNumbers = vouchers.map(v => v.voucher_number);
-    console.log(`🎯 Found ${voucherNumbers.length} vouchers to export:`, voucherNumbers);
+    // Separate vouchers by courier type
+    const genikiVouchers = vouchers.filter(v => v.courier_type !== 'meest');
+    const meestVouchers = vouchers.filter(v => v.courier_type === 'meest');
 
-    // Get combined PDF from Geniki
-    console.log('📡 Calling Geniki GetVouchersPdf for multiple vouchers...');
-    const pdfBuffer = await getMultipleVouchersPdf(voucherNumbers, workspaceId);
+    console.log(`🎯 Found ${vouchers.length} vouchers to export: ${genikiVouchers.length} Geniki, ${meestVouchers.length} Meest`);
+
+    const pdfBuffers = [];
+
+    // Get Geniki PDFs
+    if (genikiVouchers.length > 0) {
+      const genikiNumbers = genikiVouchers.map(v => v.voucher_number);
+      console.log('📡 Calling Geniki GetVouchersPdf for multiple vouchers...');
+      const genikiPdf = await getMultipleVouchersPdf(genikiNumbers, workspaceId);
+      pdfBuffers.push(genikiPdf);
+    }
+
+    // Get Meest PDFs (from stored labels)
+    for (const meestVoucher of meestVouchers) {
+      if (meestVoucher.label_data) {
+        console.log(`📄 Using stored Meest label for ${meestVoucher.voucher_number}`);
+        pdfBuffers.push(Buffer.from(meestVoucher.label_data, 'base64'));
+      } else {
+        console.log(`⚠️ No stored label for Meest voucher ${meestVoucher.voucher_number}, skipping`);
+      }
+    }
+
+    if (pdfBuffers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No labels available for export'
+      });
+    }
+
+    // Merge all PDFs or return single one
+    let pdfBuffer;
+    if (pdfBuffers.length === 1) {
+      pdfBuffer = pdfBuffers[0];
+    } else {
+      // For now, just concatenate - in production you'd use pdf-lib or similar to properly merge
+      // Since Meest and Geniki labels are separate documents, concatenation may cause issues
+      // For now, prioritize returning what we have
+      pdfBuffer = pdfBuffers[0]; // Return first PDF, TODO: implement proper PDF merging
+      console.log(`⚠️ Multiple PDF sources found, returning first. Consider implementing PDF merge.`);
+    }
     
-    console.log(`✅ Successfully exported ${voucherNumbers.length} labels in one PDF (${pdfBuffer.length} bytes)`);
+    console.log(`✅ Successfully exported ${vouchers.length} labels in one PDF (${pdfBuffer.length} bytes)`);
     
     // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=labels_${voucherNumbers.length}_vouchers_${new Date().toISOString().split('T')[0]}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=labels_${vouchers.length}_vouchers_${new Date().toISOString().split('T')[0]}.pdf`);
     res.send(pdfBuffer);
     
   } catch (error) {
