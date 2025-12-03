@@ -2564,6 +2564,126 @@ app.post('/api/imported-orders/:orderId/voucher', async (req, res) => {
   }
 });
 
+// Bulk create vouchers for selected orders
+app.post('/api/bulk-create-vouchers', async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    const workspaceId = parseInt(req.body.workspaceId) || parseInt(req.headers['x-workspace-id']) || 1;
+
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'No orders provided' });
+    }
+
+    console.log(`🎫 Bulk creating vouchers for ${orderIds.length} orders in workspace ${workspaceId}`);
+
+    // Get workspace settings
+    const workspace = await getWorkspace(workspaceId);
+    const defaultCourier = workspace?.default_courier || 'geniki';
+    console.log(`📦 Default courier: ${defaultCourier}`);
+
+    // Check if courier is properly configured
+    if (defaultCourier === 'meest' && (!workspace.meest_enabled || !workspace.meest_username || !workspace.meest_password)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Meest is not properly configured. Please check your Meest credentials in Settings.'
+      });
+    }
+
+    const results = {
+      success: [],
+      failed: [],
+      skipped: []
+    };
+
+    for (const orderId of orderIds) {
+      try {
+        // Check if order already has a voucher
+        const existingVoucher = await pool.query(
+          'SELECT voucher_number FROM vouchers WHERE order_name = $1 AND workspace_id = $2',
+          [orderId, workspaceId]
+        );
+
+        if (existingVoucher.rows.length > 0) {
+          console.log(`⏭️ Skipping ${orderId} - already has voucher ${existingVoucher.rows[0].voucher_number}`);
+          results.skipped.push({ orderId, reason: 'Already has voucher', voucherNumber: existingVoucher.rows[0].voucher_number });
+          continue;
+        }
+
+        const orderData = await getOrder(orderId, workspaceId);
+        if (!orderData) {
+          console.log(`❌ Order ${orderId} not found`);
+          results.failed.push({ orderId, error: 'Order not found' });
+          continue;
+        }
+
+        let voucher;
+        let courierType;
+
+        if (defaultCourier === 'meest') {
+          voucher = await createMeestParcel(orderData, workspaceId);
+          courierType = 'meest';
+        } else {
+          const geinikiOrder = {
+            order_number: orderData.order_name,
+            name: orderData.order_name,
+            email: orderData.email || '',
+            shipping_address: {
+              first_name: orderData.first_name || 'Customer',
+              last_name: orderData.last_name || '',
+              address1: orderData.shipping_address1 || '',
+              address2: orderData.shipping_address2 || '',
+              city: orderData.shipping_city || '',
+              zip: orderData.shipping_zip || '',
+              country_code: orderData.shipping_country_code || 'GR',
+              phone: orderData.shipping_phone || ''
+            },
+            customer: {
+              phone: orderData.shipping_phone || ''
+            },
+            line_items: orderData.products ?
+              (typeof orderData.products === 'string' ? JSON.parse(orderData.products) : orderData.products).map(p => ({
+                grams: 500,
+                quantity: p.quantity || 1,
+                name: p.name || 'Order Item'
+              }))
+              : [{ grams: 500, quantity: 1, name: orderData.line_items || 'Order Item' }],
+            total_price: parseFloat(orderData.total_price) || 0,
+            note: orderData.notes || '',
+            financial_status: orderData.financial_status || 'pending',
+            payment_gateway_names: orderData.payment_method ? [orderData.payment_method] : ['COD'],
+            payment_status: orderData.payment_status || 'cod'
+          };
+
+          voucher = await createVoucher(geinikiOrder, workspaceId);
+          courierType = 'geniki';
+        }
+
+        // Save voucher
+        await insertVoucher(orderData.order_name, voucher, workspaceId, courierType);
+        console.log(`✅ Created voucher for ${orderId}: ${voucher.voucherNumber}`);
+        results.success.push({ orderId, voucherNumber: voucher.voucherNumber, courierType });
+
+      } catch (error) {
+        console.error(`❌ Failed to create voucher for ${orderId}:`, error.message);
+        results.failed.push({ orderId, error: error.message });
+      }
+    }
+
+    console.log(`📊 Bulk voucher creation complete: ${results.success.length} success, ${results.failed.length} failed, ${results.skipped.length} skipped`);
+
+    res.json({
+      success: true,
+      message: `Created ${results.success.length} vouchers, ${results.failed.length} failed, ${results.skipped.length} skipped`,
+      results,
+      courier: defaultCourier
+    });
+
+  } catch (error) {
+    console.error('Error in bulk voucher creation:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Test all Geniki API methods (for production credentials)
 app.get('/api/test-all-geniki-methods', async (req, res) => {
   try {

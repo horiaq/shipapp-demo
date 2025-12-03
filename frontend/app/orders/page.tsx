@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useOrders } from '@/lib/hooks/useOrders';
 import { useWorkspace } from '@/lib/contexts/WorkspaceContext';
-import { bulkFulfillOrders, bulkCreateInvoices, bulkUpdateTracking, exportLabels, sendLabelsToGeniki, syncFromShopify } from '@/lib/api/orders';
+import { bulkFulfillOrders, bulkCreateInvoices, bulkUpdateTracking, exportLabels, sendLabelsToGeniki, syncFromShopify, bulkCreateVouchers } from '@/lib/api/orders';
 import OrdersTable from '@/components/OrdersTable';
 import { Pagination } from '@/components/OrdersTable';
 import BulkActionsDropdown from '@/components/Orders/BulkActionsDropdown';
@@ -333,6 +333,47 @@ export default function OrdersPage() {
     }
   };
 
+  const handleCreateLabels = async () => {
+    if (selectedOrders.length === 0 || !currentWorkspace) return;
+
+    const confirmed = confirm(
+      `Create AWB labels for ${selectedOrders.length} selected orders?\n\n` +
+      `This will use your default courier (${currentWorkspace.default_courier || 'geniki'}).`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const result = await bulkCreateVouchers(selectedOrders, currentWorkspace.workspace_id);
+
+      if (result.success) {
+        const { results } = result;
+        let message = `Label Creation Complete!\n\n`;
+        message += `✅ Created: ${results.success?.length || 0}\n`;
+        message += `⏭️ Skipped (already have labels): ${results.skipped?.length || 0}\n`;
+        message += `❌ Failed: ${results.failed?.length || 0}`;
+
+        if (results.failed?.length > 0) {
+          message += `\n\nFailed orders:\n`;
+          results.failed.slice(0, 5).forEach((f: any) => {
+            message += `- ${f.orderId}: ${f.error}\n`;
+          });
+          if (results.failed.length > 5) {
+            message += `... and ${results.failed.length - 5} more`;
+          }
+        }
+
+        alert(message);
+        setSelectedOrders([]);
+        await mutate();
+      } else {
+        alert(`Error: ${result.error || 'Failed to create labels'}`);
+      }
+    } catch (error: any) {
+      alert(`Error creating labels: ${error.message || 'Unknown error'}`);
+    }
+  };
+
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -370,6 +411,7 @@ export default function OrdersPage() {
             onExportLabels={handleExportLabels}
             onSendLabels={handleSendLabels}
             onSyncFromShopify={handleSyncFromShopify}
+            onCreateLabels={handleCreateLabels}
           />
         </div>
       </div>

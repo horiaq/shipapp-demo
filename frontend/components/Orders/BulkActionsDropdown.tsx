@@ -28,6 +28,7 @@ interface BulkActionsProps {
   onExportLabels: () => void;
   onSendLabels: () => void;
   onSyncFromShopify?: () => void;
+  onCreateLabels?: () => void;
 }
 
 export default function BulkActionsDropdown({
@@ -41,6 +42,7 @@ export default function BulkActionsDropdown({
   onExportLabels,
   onSendLabels,
   onSyncFromShopify,
+  onCreateLabels,
 }: BulkActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -100,9 +102,22 @@ export default function BulkActionsDropdown({
           <Trash2 size={16} />
           Delete Selected
         </div>
-        <div className="bulk-item" onClick={() => alert('Create Labels functionality')}>
+        <div className="bulk-item" onClick={() => selectedCount > 0 && onCreateLabels && handleAction(onCreateLabels)}>
           <Tag size={16} />
           Create Labels
+          {selectedCount > 0 && (
+            <span style={{
+              marginLeft: 'auto',
+              fontSize: '0.7rem',
+              fontWeight: '600',
+              padding: '0.15rem 0.4rem',
+              borderRadius: '4px',
+              background: 'rgba(6, 182, 212, 0.15)',
+              color: 'var(--primary)',
+            }}>
+              {selectedCount}
+            </span>
+          )}
         </div>
         <div className="bulk-item" onClick={() => selectedCount > 0 && handleAction(onExportLabels)}>
           <Share size={16} />

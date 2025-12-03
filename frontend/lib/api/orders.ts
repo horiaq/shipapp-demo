@@ -167,3 +167,15 @@ export async function cancelVoucher(voucherNumber: string, workspaceId: number):
   return response.json();
 }
 
+export async function bulkCreateVouchers(orderIds: string[], workspaceId: number): Promise<ApiResponse<any>> {
+  const response = await fetchWithAuth('/api/bulk-create-vouchers', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Workspace-Id': workspaceId.toString(),
+    },
+    body: JSON.stringify({ orderIds, workspaceId }),
+  });
+  return response.json();
+}
+
