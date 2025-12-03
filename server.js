@@ -969,6 +969,12 @@ async function createMeestParcel(orderData, workspaceId) {
     const parcelNumber = result.parcelNumber || parcelRequest.parcelNumber;
 
     console.log(`✅ Meest parcel created: ${parcelNumber}`);
+    console.log(`   Meest response keys: ${Object.keys(result).join(', ')}`);
+    console.log(`   result.parcelNumber: ${result.parcelNumber || 'not set'}`);
+    console.log(`   result.trackingNumber: ${result.trackingNumber || 'not set'}`);
+    console.log(`   result.lastMileTrackingNumber: ${result.lastMileTrackingNumber || 'not set'}`);
+    console.log(`   result.objectID: ${result.objectID || 'not set'}`);
+    console.log(`   Has lastMileLabel: ${!!result.lastMileLabel}, Has firstMileLabel: ${!!result.firstMileLabel}`);
 
     // Get label from response (lastMileLabel or firstMileLabel)
     let labelData = result.lastMileLabel || result.firstMileLabel || null;
