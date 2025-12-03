@@ -4861,7 +4861,7 @@ app.put('/api/workspaces/:id/settings', authenticateUser, authorizeWorkspace, as
     }
     
     // Clear Meest token cache if credentials changed
-    if (meest_username || meest_password) {
+    if (settings.meest_username !== undefined || settings.meest_password !== undefined) {
       meestTokenCacheByWorkspace.delete(workspaceId);
     }
     
