@@ -645,37 +645,56 @@ export default function OrdersTable({
                           <Truck size={14} />
                         </div>
                         {/* Delete AWB Button */}
-                        <div
+                        <button
                           key={`doc-voucher-delete-${order.orderName}`}
-                          className="doc-badge"
+                          type="button"
+                          className="delete-awb-btn"
                           onClick={async (e) => {
+                            e.preventDefault();
                             e.stopPropagation();
-                            if (!currentWorkspace) return;
+                            console.log('DELETE CLICKED for:', order.voucherNumber, 'workspace:', currentWorkspace?.workspace_id);
+
+                            if (!currentWorkspace) {
+                              alert('No workspace selected');
+                              return;
+                            }
 
                             const confirmed = window.confirm(`Delete AWB ${order.voucherNumber}?\nThis will allow you to create a new one.`);
                             if (!confirmed) return;
 
                             try {
+                              console.log('Calling cancelVoucher API...');
                               const result = await cancelVoucher(order.voucherNumber!, currentWorkspace.workspace_id);
+                              console.log('API result:', result);
                               if (result.success) {
+                                alert('AWB deleted successfully!');
                                 onRefresh();
                               } else {
                                 alert(`Error: ${result.message || 'Failed to delete AWB'}`);
                               }
                             } catch (error: any) {
+                              console.error('Delete error:', error);
                               alert(`Error: ${error.message || 'Failed to delete AWB'}`);
                             }
                           }}
                           style={{
                             cursor: 'pointer',
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                            color: '#ef4444'
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid #ef4444',
+                            color: '#ef4444',
+                            borderRadius: '6px',
+                            padding: '4px 6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '28px',
+                            height: '28px',
+                            marginLeft: '4px'
                           }}
                           title="Delete AWB"
                         >
                           <X size={14} />
-                        </div>
+                        </button>
                       </>
                     ) : status === 'Unfulfilled' ? (
                       <div
