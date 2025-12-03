@@ -2928,15 +2928,11 @@ app.delete('/api/voucher/:voucherNumber/cancel', async (req, res) => {
       [voucherNumber, workspaceId]
     );
 
-    // Update order to clear voucher info
+    // Update order to mark as not processed so user can create new AWB
     if (voucher.order_name) {
       await pool.query(`
         UPDATE orders
-        SET voucher_number = NULL,
-            voucher_created_at = NULL,
-            delivery_status = NULL,
-            delivery_status_updated_at = NULL,
-            processed = FALSE
+        SET processed = FALSE
         WHERE order_name = $1 AND workspace_id = $2
       `, [voucher.order_name, workspaceId]);
     }
