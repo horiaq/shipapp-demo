@@ -974,15 +974,27 @@ async function createMeestParcel(orderData, workspaceId) {
     let labelData = result.lastMileLabel || result.firstMileLabel || null;
     const trackingNumber = result.lastMileTrackingNumber || result.firstMileTrackingNUmber || null;
 
-    // If label not in response, fetch it separately
+    // If label not in response, fetch it separately with retry
     if (!labelData) {
       console.log(`📄 Label not in response, fetching separately for: ${parcelNumber}`);
-      try {
-        labelData = await getMeestLabel(parcelNumber, workspaceId);
-        console.log(`✅ Fetched label for ${parcelNumber}, size: ${labelData?.length || 0} chars`);
-      } catch (labelError) {
-        console.warn(`⚠️ Could not fetch label for ${parcelNumber}: ${labelError.message}`);
-        // Continue without label - user can download later
+
+      // Retry up to 3 times with increasing delay (Meest needs time to process)
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          // Wait before fetching (1s, 2s, 3s)
+          const delay = attempt * 1000;
+          console.log(`   Attempt ${attempt}/3, waiting ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+
+          labelData = await getMeestLabel(parcelNumber, workspaceId);
+          console.log(`✅ Fetched label for ${parcelNumber} on attempt ${attempt}, size: ${labelData?.length || 0} chars`);
+          break; // Success, exit loop
+        } catch (labelError) {
+          console.warn(`⚠️ Attempt ${attempt} failed for ${parcelNumber}: ${labelError.message}`);
+          if (attempt === 3) {
+            console.warn(`⚠️ All attempts failed for ${parcelNumber} - label will be fetched on download`);
+          }
+        }
       }
     } else {
       console.log(`✅ Label included in response for ${parcelNumber}, size: ${labelData.length} chars`);
